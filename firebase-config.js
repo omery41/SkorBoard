@@ -1,10 +1,10 @@
-// Firebase konsolu → Proje ayarları → Genel → "Uygulamalarınız" → Web uygulaması → yapılandırma.
-// Aşağıdaki değerleri oradaki kendi değerlerinle değiştir. Bu değerler gizli değildir; güvenliği firestore.rules sağlar.
+// Firebase web uygulaması yapılandırması (SkorBoard).
+// Bu değerler gizli değildir; veriyi Firestore güvenlik kuralları korur.
 export const firebaseConfig = {
-  apiKey: "BURAYA_API_KEY",
-  authDomain: "PROJE-ID.firebaseapp.com",
-  projectId: "PROJE-ID",
-  storageBucket: "PROJE-ID.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:0000000000000000"
+  apiKey: "AIzaSyAvtu8cZ_bQd3rOTcqLH8jAStkHSBFw60Y",
+  authDomain: "skorboard-2b486.firebaseapp.com",
+  projectId: "skorboard-2b486",
+  storageBucket: "skorboard-2b486.firebasestorage.app",
+  messagingSenderId: "727514927560",
+  appId: "1:727514927560:web:e4a7ad27e9e808069ef0fd"
 };
