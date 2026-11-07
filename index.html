@@ -84,6 +84,8 @@ ol.log li{display:grid;grid-template-columns:3.2em 1fr auto;gap:10px;padding:8px
 ol.log li.undone .what{text-decoration:line-through;opacity:.6}
 .pill.undo{background:var(--danger);color:var(--surface)}
 .pw{display:grid;gap:10px;max-width:360px}
+.ver{position:fixed;right:0;bottom:0;padding:6px calc(10px + env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) 10px;font-family:var(--mono);font-size:.7rem;color:var(--muted);background:var(--bg);border-top-left-radius:6px;opacity:.85;pointer-events:none;z-index:5}
+.wrap{padding-bottom:64px}
 ol.log li{grid-template-columns:3.2em 1fr auto auto}
 .del{background:none;border:1px solid var(--line);color:var(--muted);font-size:.75rem;padding:3px 8px;font-weight:500}
 .del.sure{background:var(--danger);color:var(--surface);border-color:var(--danger)}
@@ -178,6 +180,8 @@ ol.log li{grid-template-columns:3.2em 1fr auto auto}
   </div>
 </div>
 
+<div class="ver" id="ver" aria-label="Yazılım sürümü"></div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -185,6 +189,10 @@ import { getFirestore, collection, doc, onSnapshot, query, orderBy, setDoc, addD
 import { firebaseConfig } from "./firebase-config.js";
 
 // Hesaplar Firebase konsolunda bu e-postalarla açılır (KURULUM.md).
+// Yazılım sürümü: her güncellemede artırılır, sağ alt köşede görünür.
+const VERSION = "v1.0.0";
+document.getElementById("ver").textContent = "SkorBoard " + VERSION;
+
 const ACCOUNTS = { admin: "admin@tavla.test", A: "pervin@tavla.test", B: "emin@tavla.test" };
 // Firebase en az 6 karakterlik şifre ister; ekrandaki şifrenin başına sabit bir ek konur.
 const toFb = p => "tavla-" + p;
