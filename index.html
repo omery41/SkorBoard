@@ -109,6 +109,13 @@ ol.log li{grid-template-columns:3.2em 1fr auto auto}
 .status.on{border-color:var(--b);color:var(--b)}
 h2.sec{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:6px 0 0}
 .view{display:grid;gap:18px}
+.p{align-content:start}
+.pill{display:inline-block}
+#who{text-transform:none;letter-spacing:0}
+.me{font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-left:6px;padding:1px 6px;border-radius:3px;background:var(--ink);color:var(--bg);vertical-align:middle}
+.bcard .sc{font-family:var(--mono);font-size:.95rem;font-variant-numeric:tabular-nums}
+.found{font-size:.8rem;margin:0;min-height:1.1em}
+.found.ok{color:var(--b)}.found.no{color:var(--danger)}
 </style>
 </head>
 <body>
@@ -175,6 +182,7 @@ h2.sec{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:6px 0
     <form class="pw" id="newForm">
       <label class="field" id="nP1Wrap">Birinci oyuncu (pembe)<input id="nP1" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="nick"></label>
       <label class="field"><span id="nP2Label">Rakibinin nick'i (mavi)</span><input id="nP2" autocapitalize="none" spellcheck="false" maxlength="20" required placeholder="nick"></label>
+      <p class="found" id="nFound" aria-live="polite"></p>
       <label class="field">Skorboard adı (isteğe bağlı)<input id="nName" maxlength="40" placeholder="Örn. Kış turnuvası"></label>
       <button class="primary" type="submit" id="newBtn">Skorboardu başlat</button>
       <p class="err" id="newErr"></p>
@@ -240,7 +248,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v2.0.0";
+const VERSION = "v2.1.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 const DOMAIN = "skorboard.test";
@@ -268,6 +276,8 @@ let unsubBoards = [];
 let cur = null;           // açık skorboard: { id, data, events, unsub[] }
 let busy = false;
 
+const denied = e => e && (e.code === "permission-denied" || /permission/i.test(e.code || ""));
+const RULES_MSG = "Sunucu bu işleme izin vermedi. Firestore kuralları güncel değilse Firebase konsolunda Rules sekmesine yeni kuralları yapıştırıp Publish'e bas.";
 function note(t){ $("note").textContent = t || ""; show($("note"), !!t); }
 function esc(t){ const d = document.createElement("span"); d.textContent = t; return d.innerHTML; }
 const ms = t => t && t.toMillis ? t.toMillis() : (typeof t === "number" ? t : Date.now());
@@ -309,24 +319,29 @@ $("authForm").addEventListener("submit", async e => {
   try {
     if (mode === "in") await signInWithEmailAndPassword(auth, emailOf(key), toFb(pw));
     else {
-      pendingNick = raw;
+      pendingNick = raw; creating = true;
       const cred = await createUserWithEmailAndPassword(auth, emailOf(key), toFb(pw));
-      await setDoc(doc(fs, "users", key), { uid: cred.user.uid, nick: raw, created: serverTimestamp() });
+      try { await setDoc(doc(fs, "users", key), { uid: cred.user.uid, nick: raw, created: serverTimestamp() }); }
+      catch (e2) { note(denied(e2) ? RULES_MSG : "Hesap açıldı ama nick kaydı tamamlanamadı; bir sonraki girişte tekrar denenecek."); }
+      creating = false;
     }
-  } catch (err) { $("authErr").textContent = authMsg(err.code || ""); }
+  } catch (err) { creating = false; $("authErr").textContent = authMsg(err.code || ""); }
   $("authBtn").disabled = false;
 });
-let pendingNick = null;
+let pendingNick = null, creating = false;
 
 // Admin hesabı yalnızca #kurulum adresinden açılır.
 $("setupForm").addEventListener("submit", async e => {
   e.preventDefault(); const pw = $("sPw").value; $("setupErr").textContent = "";
   if (pw.length < 4) { $("setupErr").textContent = "Şifre en az 4 karakter olmalı."; return; }
   try {
+    creating = true;
     const cred = await createUserWithEmailAndPassword(auth, emailOf(ADMIN_KEY), toFb(pw));
-    await setDoc(doc(fs, "users", ADMIN_KEY), { uid: cred.user.uid, nick: "Admin", created: serverTimestamp() });
+    try { await setDoc(doc(fs, "users", ADMIN_KEY), { uid: cred.user.uid, nick: "Admin", created: serverTimestamp() }); }
+    catch (e2) { if (denied(e2)) note(RULES_MSG); }
+    creating = false;
     location.hash = "ana";
-  } catch (err) { $("setupErr").textContent = err.code === "auth/email-already-in-use" ? "Admin hesabı zaten var. Yukarıdan admin nick'iyle giriş yap." : authMsg(err.code || ""); }
+  } catch (err) { creating = false; $("setupErr").textContent = err.code === "auth/email-already-in-use" ? "Admin hesabı zaten var. Yukarıdan admin nick'iyle giriş yap." : authMsg(err.code || ""); }
 });
 
 $("logout").onclick = async () => { await signOut(auth); location.hash = ""; };
@@ -336,7 +351,12 @@ onAuthStateChanged(auth, async user => {
   if (!user) { me = null; route(); return; }
   const key = (user.email || "").split("@")[0];
   me = { uid: user.uid, key, nick: pendingNick || key, admin: key === ADMIN_KEY };
-  try { const s = await getDoc(doc(fs, "users", key)); if (s.exists()) me.nick = s.data().nick || me.nick; } catch (e) {}
+  try {
+    const s = await getDoc(doc(fs, "users", key));
+    if (s.exists()) me.nick = s.data().nick || me.nick;
+    // Kayıt sırasında nick kaydı yazılamadıysa şimdi tamamla (rakipler bu nick'i bulabilsin).
+    else if (!creating) await setDoc(doc(fs, "users", key), { uid: user.uid, nick: me.admin ? "Admin" : me.nick, created: serverTimestamp() });
+  } catch (e) { if (denied(e)) note(RULES_MSG); }
   pendingNick = null;
   startBoards();
   if (!location.hash || location.hash === "#kurulum") location.hash = "ana"; else route();
@@ -377,24 +397,38 @@ function route(){
 }
 
 /* ================= Skorboard listesi ================= */
-function stopBoards(){ unsubBoards.forEach(u => u()); unsubBoards = []; boards = new Map(); }
+function stopBoards(){ unsubBoards.forEach(u => u()); unsubBoards = []; boards = new Map(); scoreSubs.forEach(u => u()); scoreSubs.clear(); totals.clear(); }
 function startBoards(){
   const q = me.admin ? collection(fs, "boards") : query(collection(fs, "boards"), where("players", "array-contains", me.uid));
   unsubBoards.push(onSnapshot(q, s => {
     boards = new Map(s.docs.map(d => [d.id, { id: d.id, ...d.data({ serverTimestamps: "estimate" }) }]));
+    syncScoreSubs();
     if (!$("vHome").classList.contains("hidden")) renderHome();
     if (cur && boards.has(cur.id)) { cur.data = boards.get(cur.id); renderBoard(); }
-  }, () => note("Skorboardlar yüklenemedi. Bağlantını kontrol edip sayfayı yenile.")));
+  }, e => note(denied(e) ? RULES_MSG : "Skorboardlar yüklenemedi. Bağlantını kontrol edip sayfayı yenile.")));
 }
 function card(b){
   const el = document.createElement("button"); el.className = "bcard";
   const mine = !me.admin;
-  el.innerHTML = `<span class="vs"><span class="a"></span> – <span class="b"></span></span><span class="arrow">›</span><span class="meta"></span>`;
+  el.innerHTML = `<span class="vs"><span class="a"></span> – <span class="b"></span></span><span class="sc"></span><span class="meta"></span>`;
+  const t = totals.get(b.id);
+  el.querySelector(".sc").textContent = t ? `${Math.floor(t.A/5)} – ${Math.floor(t.B/5)}` : "›";
   el.querySelector(".a").textContent = b.nicks?.A || "?";
   el.querySelector(".b").textContent = b.nicks?.B || "?";
   el.querySelector(".meta").textContent = (b.name ? b.name + " · " : "") + fmtDate(b.created) + " tarihinde başladı";
   el.onclick = () => { location.hash = "b-" + b.id; };
   return el;
+}
+// Ana sayfadaki kartlar için her skorboardın güncel skorunu dinle (en fazla 30 skorboard).
+const totals = new Map(), scoreSubs = new Map();
+function syncScoreSubs(){
+  const want = new Set([...boards.values()].sort((a, b) => ms(b.created) - ms(a.created)).slice(0, 30).map(b => b.id));
+  for (const [id, u] of scoreSubs) if (!want.has(id)) { u(); scoreSubs.delete(id); totals.delete(id); }
+  for (const id of want) if (!scoreSubs.has(id)) scoreSubs.set(id, onSnapshot(collection(fs, "boards", id, "events"), s => {
+    const { live } = derive(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    const t = { A: 0, B: 0 }; live.forEach(g => t[g.player] += g.n); totals.set(id, t);
+    if (!$("vHome").classList.contains("hidden")) renderHome();
+  }, () => {}));
 }
 function renderHome(){
   if (!me) return;
@@ -412,16 +446,28 @@ function renderHome(){
 $("goNew").onclick = () => { location.hash = "yeni"; };
 $("newBack").onclick = () => { location.hash = "ana"; };
 function prepNew(){
-  $("newErr").textContent = "";
+  $("newErr").textContent = ""; $("nFound").textContent = "";
   show($("nP1Wrap"), me.admin);
   $("nP2Label").textContent = me.admin ? "İkinci oyuncu (mavi)" : "Rakibinin nick'i (mavi)";
 }
 async function lookup(raw){
   const key = nickKey(raw);
-  if (!validKey(key) || key === ADMIN_KEY) return null;
+  if (key === ADMIN_KEY) throw new Error("Admin bir skorboardda oyuncu olamaz. Kayıtlı bir oyuncunun nick'ini yaz.");
+  if (!validKey(key)) return null;
   const s = await getDoc(doc(fs, "users", key));
   return s.exists() ? { key, ...s.data() } : null;
 }
+let checkSeq = 0;
+async function liveCheck(){
+  const raw = $("nP2").value.trim(), el = $("nFound"), seq = ++checkSeq;
+  if (!raw) { el.textContent = ""; el.className = "found"; return; }
+  try { const u = await lookup(raw); if (seq !== checkSeq) return;
+    el.className = "found " + (u ? "ok" : "no"); el.textContent = u ? "✓ " + u.nick + " bulundu" : "Bu nick'le kayıtlı kimse yok.";
+  } catch (e) { if (seq !== checkSeq) return; el.className = "found no"; el.textContent = e.message && !e.code ? e.message : ""; }
+}
+let checkTimer = null;
+$("nP2").addEventListener("input", () => { clearTimeout(checkTimer); checkTimer = setTimeout(liveCheck, 450); });
+$("nP2").addEventListener("blur", liveCheck);
 $("newForm").addEventListener("submit", async e => {
   e.preventDefault(); $("newErr").textContent = ""; $("newBtn").disabled = true;
   try {
@@ -437,7 +483,7 @@ $("newForm").addEventListener("submit", async e => {
       createdBy: me.uid, created: serverTimestamp(), status: "active"
     });
     $("newForm").reset(); location.hash = "b-" + ref.id;
-  } catch (err) { $("newErr").textContent = err.message && !err.code ? err.message : "Skorboard oluşturulamadı."; }
+  } catch (err) { $("newErr").textContent = err.message && !err.code ? err.message : denied(err) ? RULES_MSG : "Skorboard oluşturulamadı. Bağlantını kontrol edip tekrar dene."; }
   $("newBtn").disabled = false;
 });
 
@@ -491,6 +537,7 @@ function renderBoard(){
     if (sc !== cur.prev[p]) { el.classList.add("bump"); setTimeout(() => el.classList.remove("bump"), 220); cur.prev[p] = sc; }
     $("tally"+p).innerHTML = tallySvg(tot[p]%5, `var(--${p.toLowerCase()})`) + `<span class="num">${tot[p]%5}/5</span>`;
     $("name"+p).textContent = names[p]; $("lg"+p).textContent = names[p];
+    if (role === p) { const m = document.createElement("span"); m.className = "me"; m.textContent = "Sen"; $("name"+p).appendChild(m); }
     document.querySelector("#vBoard .p."+p).classList.toggle("locked", !(open && (role === "admin" || role === p)));
   });
   const sA = Math.floor(tot.A/5), sB = Math.floor(tot.B/5);
@@ -520,7 +567,7 @@ function renderBoard(){
   $("toggleDone").textContent = open ? "Skorboardu bitir" : "Yeniden aç";
   show($("toggleDone"), !!role);
   show($("delBoard"), role === "admin");
-  $("adminHint").textContent = role === "admin" ? "Admin olarak eklediğin ve sildiğin kayıtlar defterde iz bırakmaz." : "";
+  $("adminHint").textContent = (open ? "" : "Bu skorboard bitti; çentik atmak için önce yeniden aç. ") + (role === "admin" ? "Admin olarak eklediğin ve sildiğin kayıtlar defterde iz bırakmaz." : "");
   drawChart(series);
 }
 function drawChart(s){
