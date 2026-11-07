@@ -111,6 +111,12 @@ ol.log li.undone .what{text-decoration:line-through;opacity:.6}
       <button class="primary" type="submit" id="loginBtn">Giriş yap</button>
       <p class="err" id="loginErr"></p>
     </form>
+    <div class="panel hidden" id="setupBox">
+      <h2>İlk kurulum</h2>
+      <p class="rule">Admin, Pervin ve Emin hesaplarını 1234 şifresiyle oluşturur. Daha önce oluşturulmuş hesaplara dokunmaz.</p>
+      <button class="primary" id="setupBtn">Hesapları oluştur</button>
+      <ol class="log" id="setupLog"></ol>
+    </div>
   </section>
 
   <!-- SKOR -->
@@ -169,7 +175,7 @@ ol.log li.undone .what{text-decoration:line-through;opacity:.6}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, query, orderBy, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -215,6 +221,7 @@ $("logout").onclick = async () => { setViewerSaved(false); if (auth.currentUser)
 function roleOf(user){ if (!user) return null; const e = (user.email||"").toLowerCase(); return Object.keys(ACCOUNTS).find(k => ACCOUNTS[k] === e) || null; }
 
 onAuthStateChanged(auth, user => {
+  if (setupRunning) return;
   const r = roleOf(user);
   if (r) { setViewerSaved(false); enter(r); }
   else enter(viewerSaved() ? "viewer" : null);
@@ -227,9 +234,31 @@ function enter(r){
   show($("role"), !!r); show($("logout"), !!r);
   show($("pwOpen"), !!r && r !== "viewer"); show($("pwForm"), false);
   $("logout").textContent = r === "viewer" ? "Giriş ekranı" : "Çıkış";
+  syncSetup();
   if (!r) { show($("loginForm"), false); document.querySelectorAll(".choice").forEach(x => x.setAttribute("aria-pressed","false")); return; }
   startData(); render();
 }
+
+/* ---------- ilk kurulum (sadece #kurulum ile görünür) ---------- */
+let setupRunning = false;
+function syncSetup(){ show($("setupBox"), location.hash === "#kurulum" && !role); }
+window.addEventListener("hashchange", syncSetup);
+$("setupBtn").onclick = async () => {
+  setupRunning = true; $("setupBtn").disabled = true; const log = $("setupLog"); log.innerHTML = "";
+  const label = { admin: "Admin", A: "Pervin", B: "Emin" };
+  for (const r of ["admin", "A", "B"]) {
+    const li = document.createElement("li"); li.style.gridTemplateColumns = "1fr auto";
+    let msg;
+    try { await createUserWithEmailAndPassword(auth, ACCOUNTS[r], toFb("1234")); msg = "oluşturuldu"; }
+    catch (e) { msg = e.code === "auth/email-already-in-use" ? "zaten var" :
+      e.code === "auth/operation-not-allowed" ? "E-posta/Şifre girişi Firebase'de kapalı" :
+      e.code === "auth/admin-restricted-operation" ? "Firebase'de yeni hesap açma kapalı" : "oluşturulamadı (" + e.code + ")"; }
+    const a = document.createElement("span"); a.textContent = label[r]; const b = document.createElement("span"); b.className = "when"; b.textContent = msg;
+    li.append(a, b); log.appendChild(li);
+  }
+  if (auth.currentUser) await signOut(auth);
+  setupRunning = false; $("setupBtn").disabled = false;
+};
 
 /* ---------- şifre değiştirme ---------- */
 $("pwOpen").onclick = () => { show($("pwForm"), true); $("pwErr").textContent = ""; $("pwErr").className = "err"; $("pwOld").focus(); };

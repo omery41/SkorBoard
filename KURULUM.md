@@ -5,14 +5,8 @@ Sayfa GitHub Pages'te durur. Skorlar ve girişler Firebase'de (ücretsiz plan) t
 ## 1. Firebase projesi
 1. https://console.firebase.google.com adresine Google hesabınla gir, **Proje ekle**'ye bas. İsim örneği: `tavla-skor`. Google Analytics'i kapatabilirsin.
 2. **Build → Authentication → Başlayın → Sign-in method** sekmesinde **E-posta/Şifre**'yi etkinleştir.
-3. **Users → Kullanıcı ekle** ile aşağıdaki 3 hesabı aç. Şifre sütunundakini aynen yaz: ekranda girilen 1234'ün başına sistem otomatik olarak `tavla-` ekliyor, çünkü Firebase en az 6 karakter istiyor.
-
-   | Rol    | E-posta             | Şifre        |
-   |--------|---------------------|--------------|
-   | Admin  | admin@tavla.test    | `tavla-1234` |
-   | Pervin | pervin@tavla.test   | `tavla-1234` |
-   | Emin   | emin@tavla.test     | `tavla-1234` |
-
+3. Hesapları konsoldan açman gerekmiyor. Kurulum bitince sayfayı `https://omery41.github.io/SkorBoard/#kurulum` adresiyle aç ve **Hesapları oluştur**'a bas. Admin, Pervin ve Emin hesapları 1234 şifresiyle oluşur. (Arka planda e-postalar admin@ / pervin@ / emin@tavla.test, Firebase'e giden şifre `tavla-1234`.)
+   Hesaplar oluştuktan sonra **Authentication → Settings → Kullanıcı işlemleri** bölümünde **Oluşturmayı etkinleştir (sign-up)** seçeneğini kapat. Böylece başka kimse yeni hesap açamaz.
 4. **Build → Firestore Database → Veritabanı oluştur** adımında konum olarak `eur3 (europe-west)`, mod olarak **Üretim modu**nu seç.
 5. Firestore'un **Kurallar (Rules)** sekmesine `firestore.rules` dosyasının tamamını yapıştırıp **Yayınla**'ya bas.
 6. **Proje ayarları (dişli) → Genel → Uygulamalarınız** bölümünde web simgesine (`</>`) bas ve bir isim ver. Çıkan `firebaseConfig` değerlerini `firebase-config.js` dosyasına kopyala.
