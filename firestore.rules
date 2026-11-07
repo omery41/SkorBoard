@@ -99,7 +99,7 @@ service cloud.firestore {
           return d.keys().hasOnly(['type', 'player', 'n', 'by', 't'])
             && d.type == 'win'
             && d.player in ['A', 'B']
-            && d.n in [1, 2];
+            && d.n in [1, 2, 5];
         }
         function targetPath(d) {
           return /databases/$(database)/documents/boards/$(b)/events/$(d.target);
