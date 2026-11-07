@@ -70,8 +70,32 @@ service cloud.firestore {
           (p == 'A' && boardData().players[0] == request.auth.uid) ||
           (p == 'B' && boardData().players[1] == request.auth.uid));
       }
+      // Oyuncu renkleri: listeden seçilir, iki taraf aynı renk olamaz.
+      function palette() {
+        return ['#ff6fb1', '#ff5c5c', '#ff9a3c', '#ffd447', '#4be08a', '#2fd6d0', '#4aa8ff', '#b18cff', '#f4f1ff'];
+      }
+      function validColors(d) {
+        return d.colors is map
+          && d.colors.keys().hasOnly(['A', 'B'])
+          && d.colors.A in palette()
+          && d.colors.B in palette()
+          && d.colors.A != d.colors.B;
+      }
+      function oldColor(side, def) {
+        return resource.data.get('colors', {}).get(side, def);
+      }
+      // Oyuncu sadece kendi tarafının rengini değiştirebilir.
+      function ownColorChange() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['colors'])
+          && validColors(request.resource.data)
+          && ((resource.data.players[0] == request.auth.uid
+                && request.resource.data.colors.B == oldColor('B', '#4aa8ff'))
+            || (resource.data.players[1] == request.auth.uid
+                && request.resource.data.colors.A == oldColor('A', '#ff6fb1')));
+      }
       function validBoard(d) {
-        return d.keys().hasOnly(['name', 'players', 'nicks', 'createdBy', 'created', 'status'])
+        return d.keys().hasOnly(['name', 'players', 'nicks', 'createdBy', 'created', 'status', 'colors'])
+          && (!('colors' in d) || validColors(d))
           && d.name is string && d.name.size() <= 40
           && d.players is list && d.players.size() == 2
           && d.players[0] != d.players[1]
@@ -90,8 +114,9 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (signedIn()
           && request.auth.uid in resource.data.players
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-          && request.resource.data.status in ['active', 'done']);
+          && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                && request.resource.data.status in ['active', 'done'])
+            || ownColorChange()));
       allow delete: if isAdmin();
 
       match /events/{id} {

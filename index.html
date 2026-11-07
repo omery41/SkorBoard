@@ -4,29 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SkorBoard</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
+<link rel="icon" type="image/svg+xml" href="icon.svg?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=3">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="SkorBoard">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#130e30">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: iki oyuncu yan yana iki "hane" gibi; altta çentik grafiği ve oyun defteri */
+/* Tema: "tavla gecesi" — gece moru zemin, altın vurgu, üstte tavla haneleri şeridi. Tek ve bilinçli koyu tema. */
 :root{
-  --bg:#efe6d6; --surface:#f8f2e7; --ink:#2a1d14; --muted:#7a6656; --line:#d8c8b0;
-  --a:#c2185b; --b:#1f5fae; --a-soft:#f8d7e4; --b-soft:#d6e4f6; --danger:#a3361f; --wa:#1a8d4a;
+  --bg:#130e30; --surface:#211955; --surface2:#2b2170; --ink:#fbf5e6; --muted:#b9b0de; --line:#3d3485;
+  --gold:#ffc94a; --gold-ink:#241600; --danger:#ff7a6b; --wa:#25d366;
+  --a:#ff6fb1; --b:#4aa8ff;
   --display:"Rozha One",Georgia,serif; --body:"Work Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#1c1511; --surface:#271e18; --ink:#f1e6d6; --muted:#a8937f; --line:#3d2f25;
-  --a:#f48fb1; --b:#7fb3f0; --a-soft:#3d1d2a; --b-soft:#18283e; --danger:#ef8a6b; --wa:#1f9c55; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#1c1511; --surface:#271e18; --ink:#f1e6d6; --muted:#a8937f; --line:#3d2f25;
-  --a:#f48fb1; --b:#7fb3f0; --a-soft:#3d1d2a; --b-soft:#18283e; --danger:#ef8a6b; --wa:#1f9c55; color-scheme:dark}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;min-height:100vh;
+  background-image:radial-gradient(900px 520px at 0% -8%,rgba(150,70,255,.35),transparent 62%),radial-gradient(760px 480px at 105% 4%,rgba(255,80,160,.22),transparent 60%),radial-gradient(900px 700px at 50% 120%,rgba(60,120,255,.18),transparent 60%)}
+/* Tavla haneleri şeridi */
+body::before{content:"";display:block;height:16px;opacity:.9;
+  background:linear-gradient(135deg,var(--gold) 33.3%,transparent 33.3%) 0 0/24px 16px,linear-gradient(225deg,#ff5c8a 33.3%,transparent 33.3%) 0 0/24px 16px}
 .wrap{max-width:860px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
 header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
-h1{font-family:var(--display);font-weight:400;font-size:2rem;margin:0;line-height:1.1;text-wrap:balance}
+h1{font-family:var(--display);font-weight:400;font-size:2.1rem;margin:0;line-height:1.1;text-wrap:balance;background:linear-gradient(90deg,var(--gold),#ff8fc4);-webkit-background-clip:text;background-clip:text;color:transparent}
 .role{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .rule{font-size:.85rem;color:var(--muted);margin:0}
 .players{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.p{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:grid;gap:12px;min-width:0}
-.p.A{border-top:5px solid var(--a)} .p.B{border-top:5px solid var(--b)}
+.p{background:linear-gradient(160deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:12px;min-width:0;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.p.A{border-top:6px solid var(--a);box-shadow:0 10px 30px rgba(0,0,0,.25),0 -6px 24px -10px var(--a)} .p.B{border-top:6px solid var(--b);box-shadow:0 10px 30px rgba(0,0,0,.25),0 -6px 24px -10px var(--b)}
 .name{font-weight:600;font-size:1.05rem;background:none;border:0;border-bottom:1px dashed transparent;color:var(--ink);font-family:var(--body);width:100%;padding:0}
 .name:not([readonly]):hover,.name:focus{border-bottom-color:var(--line);outline:none}
 .score{font-family:var(--display);font-size:4.2rem;line-height:.9;font-variant-numeric:tabular-nums}
@@ -35,14 +43,14 @@ h1{font-family:var(--display);font-weight:400;font-size:2rem;margin:0;line-heigh
 .tally{height:34px;display:flex;align-items:center;gap:6px}
 .tally svg{height:34px;width:auto}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
-button{font-family:var(--body);font-size:.92rem;font-weight:600;border-radius:5px;padding:9px 12px;cursor:pointer;border:1px solid transparent}
+button{font-family:var(--body);font-size:.92rem;font-weight:600;border-radius:10px;padding:9px 12px;cursor:pointer;border:1px solid transparent}
 button:focus-visible,.name:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.A .win{background:var(--a);color:var(--surface)} .B .win{background:var(--b);color:var(--surface)}
-.A .mars{background:var(--a-soft);color:var(--a);border-color:var(--a)} .B .mars{background:var(--b-soft);color:var(--b);border-color:var(--b)}
+.A .win{background:var(--a);color:#160f33} .B .win{background:var(--b);color:#160f33}
+.A .mars{background:color-mix(in srgb,var(--a) 16%,transparent);color:var(--a);border-color:var(--a)} .B .mars{background:color-mix(in srgb,var(--b) 16%,transparent);color:var(--b);border-color:var(--b)}
 button:disabled{opacity:.45;cursor:default}
 .lead{text-align:center;font-size:.9rem;color:var(--muted);margin:-8px 0 0}
 section h2{font-family:var(--display);font-weight:400;font-size:1.3rem;margin:0 0 8px}
-.chart{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;overflow-x:auto}
 .chart svg{display:block;width:100%;min-width:300px;height:auto}
 .legend{display:flex;gap:16px;font-size:.82rem;color:var(--muted);margin-top:6px}
 .legend i{display:inline-block;width:12px;height:3px;vertical-align:middle;margin-right:5px}
@@ -54,14 +62,14 @@ ol.log li{display:grid;grid-template-columns:3.2em 1fr auto;gap:10px;padding:8px
 .undo{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:.88rem}
 .ghost{background:none;border-color:var(--line);color:var(--ink)}
 .danger{background:var(--danger);color:var(--surface)}
-.note{font-size:.88rem;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:6px;padding:10px 12px}
+.note{font-size:.88rem;color:var(--ink);background:var(--surface);border:1px dashed var(--gold);border-radius:12px;padding:10px 12px}
 .empty{color:var(--muted);font-size:.9rem;padding:12px 0}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;gap:10px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px}
 .panel h2{margin:0}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:0}
 .slot{font-size:.9rem}.slot b{font-weight:600}
-.badge{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:var(--ink);color:var(--bg)}
+.badge{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--gold);color:var(--gold-ink)}
 .small{font-size:.82rem;padding:6px 10px}
 .p.locked .btns{display:none}
 @media (max-width:480px){.score{font-size:3.4rem}.p{padding:12px}h1{font-size:1.6rem}}
@@ -75,8 +83,9 @@ ol.log li{display:grid;grid-template-columns:3.2em 1fr auto;gap:10px;padding:8px
 .choice.A{border-left:6px solid var(--a)}.choice.B{border-left:6px solid var(--b)}
 .choice.adm{border-left:6px solid var(--ink)}.choice.view{border-left:6px solid var(--muted)}
 .field{display:grid;gap:4px;font-size:.88rem;color:var(--muted)}
-.field input{font:inherit;font-size:1rem;padding:10px;border-radius:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
-.primary{background:var(--ink);color:var(--bg)}
+.field input{font:inherit;font-size:1rem;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink)}
+.field input:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:transparent}
+.primary{background:var(--gold);color:var(--gold-ink)}
 .err{color:var(--danger);font-size:.88rem;min-height:1.2em;margin:0}
 .ok{color:var(--b);font-size:.88rem;margin:0}
 .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -84,7 +93,7 @@ ol.log li{display:grid;grid-template-columns:3.2em 1fr auto;gap:10px;padding:8px
 ol.log li.undone .what{text-decoration:line-through;opacity:.6}
 .pill.undo{background:var(--danger);color:var(--surface)}
 .pw{display:grid;gap:10px;max-width:360px}
-.ver{position:fixed;right:0;bottom:0;padding:6px calc(10px + env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) 10px;font-family:var(--mono);font-size:.7rem;color:var(--muted);background:var(--bg);border-top-left-radius:6px;opacity:.85;pointer-events:none;z-index:5}
+.ver{position:fixed;right:0;bottom:0;backdrop-filter:blur(6px);padding:6px calc(10px + env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) 10px;font-family:var(--mono);font-size:.7rem;color:var(--muted);background:var(--bg);border-top-left-radius:6px;opacity:.85;pointer-events:none;z-index:5}
 .wrap{padding-bottom:64px}
 ol.log li{grid-template-columns:3.2em 1fr auto auto}
 .del{background:none;border:1px solid var(--line);color:var(--muted);font-size:.75rem;padding:3px 8px;font-weight:500}
@@ -99,7 +108,7 @@ ol.log li{grid-template-columns:3.2em 1fr auto auto}
 .big.go{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .big.go span{color:var(--bg);opacity:.75}
 .cards{display:grid;gap:8px}
-.bcard{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;text-align:left;padding:12px 14px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:500}
+.bcard{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;text-align:left;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(90deg,color-mix(in srgb,var(--ca,#ff6fb1) 14%,transparent),transparent 45%,transparent 55%,color-mix(in srgb,var(--cb,#4aa8ff) 14%,transparent)),var(--surface);color:var(--ink);font-weight:500}
 .bcard .vs{font-size:.95rem}
 .bcard .vs .a{color:var(--a);font-weight:600}.bcard .vs .b{color:var(--b);font-weight:600}
 .bcard .meta{grid-column:1/-1;font-size:.78rem;color:var(--muted);font-weight:400}
@@ -118,6 +127,30 @@ ol.log li.tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
 ol.log li.tap:active{background:var(--line)}
 ol.log li.armed{outline:2px dashed var(--danger);outline-offset:-2px;border-radius:4px}
 .tap-hint{display:block;font-size:.78rem;color:var(--danger);margin-top:2px}
+.namerow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.namerow .name{min-width:0;overflow-wrap:anywhere}
+.me{white-space:nowrap;display:inline-block}
+header{align-items:center}
+header:not(.in) .tools{width:auto}
+.colbtn{flex:none;display:inline-flex;align-items:center;gap:3px;padding:4px 6px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.colbtn i{display:block;width:16px;height:16px;border-radius:4px;background:var(--c)}
+.colbtn::after{content:"▾";font-size:.7rem;color:var(--muted)}
+.colbtn[aria-expanded="true"]{border-color:var(--ink)}
+.swatches{display:flex;flex-wrap:wrap;gap:6px;margin-top:-4px;padding:8px;border-radius:10px;background:rgba(0,0,0,.22)}
+.sw{width:24px;height:24px;padding:0;border-radius:6px;background:var(--c);border:2px solid rgba(255,255,255,.18);position:relative}
+.sw[aria-checked="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--c)}
+.sw[aria-checked="true"]::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;font-size:.8rem;color:#160f33;font-weight:800}
+.sw.taken{opacity:.35;cursor:not-allowed;background:linear-gradient(135deg,transparent 45%,var(--ink) 45%,var(--ink) 55%,transparent 55%),var(--c)}
+header .tools{flex-wrap:nowrap;gap:10px;width:100%;min-width:0}
+header .tools .link{white-space:nowrap;font-size:.82rem;padding:4px 0}
+header .tools #who{flex:none}
+.shareico{margin-left:auto!important;flex:none;display:inline-grid;place-items:center;width:30px;height:30px;border-radius:999px;color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);margin-left:2px}
+.shareico svg{width:18px;height:18px}
+.shareico:active{background:color-mix(in srgb,var(--gold) 18%,transparent)}
+.sechead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px}
+.sechead h2.sec{margin:0}
+.newbtn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--gold),#ff9ac9);color:var(--gold-ink);border:0;border-radius:999px;padding:9px 16px;font-weight:700;box-shadow:0 6px 18px -6px rgba(255,180,90,.6)}
+.newbtn span{font-size:1.05rem;line-height:1}
 .share{display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 16px;border-radius:6px;font-weight:600;text-decoration:none;background:var(--wa);color:#fff;border:0}
 .share svg{width:22px;height:22px;flex:none}
 .share:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -143,6 +176,7 @@ input,select,textarea{font-size:16px}
       <button class="link hidden" id="nickOpen">Nick değiştir</button>
       <button class="link hidden" id="pwOpen">Şifre değiştir</button>
       <button class="link hidden" id="logout">Çıkış</button>
+      <a class="shareico" target="_blank" rel="noopener" data-share aria-label="Uygulamayı WhatsApp'ta paylaş" title="Paylaş"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></a>
     </div>
   </header>
 
@@ -160,7 +194,6 @@ input,select,textarea{font-size:16px}
       <button class="primary" type="submit" id="authBtn">Giriş yap</button>
       <p class="err" id="authErr"></p>
     </form>
-    <a class="share" target="_blank" rel="noopener" data-share><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2Z"/></svg>Uygulamayı paylaş</a>
     <div class="panel hidden" id="setupBox">
       <h2>Admin hesabı</h2>
       <p class="rule">Admin hesabı yalnızca bu adresten açılır. Şifreyi belirle ve oluştur.</p>
@@ -194,9 +227,7 @@ input,select,textarea{font-size:16px}
 
   <!-- ANA SAYFA -->
   <section class="view hidden" id="vHome">
-    <button class="big go" id="goNew">Yeni skorboard başlat<span>Rakibini nick'iyle seç, ilk oyunu gir.</span></button>
-    <a class="share" target="_blank" rel="noopener" data-share><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2Z"/></svg>Uygulamayı paylaş</a>
-    <h2 class="sec" id="hActive">Devam edenler</h2>
+    <div class="sechead"><h2 class="sec" id="hActive">Devam edenler</h2><button class="newbtn" id="goNew"><span aria-hidden="true">＋</span> Yeni skorboard</button></div>
     <div class="cards" id="listActive"></div>
     <h2 class="sec">Bitenler</h2>
     <div class="cards" id="listDone"></div>
@@ -226,14 +257,16 @@ input,select,textarea{font-size:16px}
     <p class="rule">Galibiyet 1 çentik, mars 2 çentik. 5 çentik = 1 skor; artan çentik devretmez. “Skor +1” çentiğe dokunmadan skoru artırır. Düşürmek için çentik çizgilerine ya da skor rakamına dokun.</p>
     <div class="players">
       <div class="p A locked">
-        <div class="name" id="nameA"></div>
+        <div class="namerow"><div class="name" id="nameA"></div><button type="button" class="colbtn hidden" id="cbA" aria-expanded="false" aria-controls="swA" title="Renk seç"><i></i></button></div>
+        <div class="swatches hidden" id="swA" role="radiogroup" aria-label="Renk seç"></div>
         <div class="score" id="scoreA" data-minus="-5" data-p="A">0<small>skor</small></div>
         <div class="tally" id="tallyA" data-minus="-1" data-p="A"></div>
         <p class="arm-hint" id="armA" aria-live="polite"></p>
         <div class="btns"><button class="win" data-w="A" data-n="1">Kazandı +1</button><button class="mars" data-w="A" data-n="2">Mars +2</button><button class="plus" data-w="A" data-n="5">Skor +1</button></div>
       </div>
       <div class="p B locked">
-        <div class="name" id="nameB"></div>
+        <div class="namerow"><div class="name" id="nameB"></div><button type="button" class="colbtn hidden" id="cbB" aria-expanded="false" aria-controls="swB" title="Renk seç"><i></i></button></div>
+        <div class="swatches hidden" id="swB" role="radiogroup" aria-label="Renk seç"></div>
         <div class="score" id="scoreB" data-minus="-5" data-p="B">0<small>skor</small></div>
         <div class="tally" id="tallyB" data-minus="-1" data-p="B"></div>
         <p class="arm-hint" id="armB" aria-live="polite"></p>
@@ -274,7 +307,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v2.8.0";
+const VERSION = "v3.0.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 /* ---- Otomatik güncelleme ----
@@ -316,6 +349,13 @@ const fs = getFirestore(app);
 const $ = id => document.getElementById(id);
 const show = (el, on) => el.classList.toggle("hidden", !on);
 const P = ["A", "B"];
+// Oyuncu renkleri (Firestore kurallarındaki liste ile aynı olmalı)
+const PALETTE = [
+  ["#ff6fb1","Pembe"],["#ff5c5c","Kırmızı"],["#ff9a3c","Turuncu"],["#ffd447","Sarı"],["#4be08a","Yeşil"],
+  ["#2fd6d0","Turkuaz"],["#4aa8ff","Mavi"],["#b18cff","Mor"],["#f4f1ff","Beyaz"]
+];
+const DEF = { A: "#ff6fb1", B: "#4aa8ff" };
+const colorsOf = b => ({ A: b?.colors?.A || DEF.A, B: b?.colors?.B || DEF.B });
 // WhatsApp ile paylaş: uygulamanın linkini hazır mesajla açar.
 const APP_URL = "https://omery41.github.io/SkorBoard/";
 const SHARE_TEXT = "Tavla skorlarımızı SkorBoard'da tutalım 🎲\n" + APP_URL + "\n\n\"Kayıt ol\" sekmesinden nick ve şifreyle hesap açabilirsin.";
@@ -542,6 +582,7 @@ function route(){
   let v = "vLogin";
   if (me) v = h === "yeni" ? "vNew" : h.startsWith("b-") ? "vBoard" : "vHome";
   views.forEach(x => show($(x), x === v));
+  document.querySelector("header").classList.toggle("in", !!me);
   show($("who"), !!me); show($("logout"), !!me); show($("pwOpen"), !!me); show($("nickOpen"), !!me && !me.admin);
   if (!me) show($("nickForm"), false);
   if (me) $("who").textContent = me.admin ? "Admin" : me.nick;
@@ -577,6 +618,8 @@ function card(b){
   const nm = boardNames(b);
   el.querySelector(".a").textContent = nm.A;
   el.querySelector(".b").textContent = nm.B;
+  const col = colorsOf(b); el.querySelector(".a").style.color = col.A; el.querySelector(".b").style.color = col.B;
+  el.style.setProperty("--ca", col.A); el.style.setProperty("--cb", col.B);
   el.querySelector(".meta").textContent = (b.name ? b.name + " · " : "") + fmtDate(b.created) + " tarihinde başladı";
   el.onclick = () => { location.hash = "b-" + b.id; };
   return el;
@@ -647,7 +690,7 @@ $("newForm").addEventListener("submit", async e => {
     if (a.uid === b.uid) throw new Error("İki oyuncu aynı kişi olamaz.");
     const ref = await addDoc(collection(fs, "boards"), {
       name: $("nName").value.trim().slice(0, 40),
-      players: [a.uid, b.uid], nicks: { A: a.nick, B: b.nick },
+      players: [a.uid, b.uid], nicks: { A: a.nick, B: b.nick }, colors: { ...DEF },
       createdBy: me.uid, created: serverTimestamp(), status: "active"
     });
     $("newForm").reset(); location.hash = "b-" + ref.id;
@@ -709,6 +752,26 @@ function renderBoard(){
   const role = myRole(), open = d.status !== "done";
   ensureProfiles(d.players || []);
   const names = boardNames(d);
+  const col = colorsOf(d);
+  $("vBoard").style.setProperty("--a", col.A); $("vBoard").style.setProperty("--b", col.B);
+  P.forEach(p => {
+    const box = $("sw"+p), other = col[p === "A" ? "B" : "A"];
+    const mine = role === "admin" || role === p, cb = $("cb"+p);
+    show(cb, mine); cb.style.setProperty("--c", col[p]);
+    cb.setAttribute("aria-expanded", mine && colorOpen === p);
+    show(box, mine && colorOpen === p);
+    if (!mine) return;
+    box.innerHTML = "";
+    PALETTE.forEach(([hex, nm]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "sw"; b.style.setProperty("--c", hex); b.dataset.c = hex; b.dataset.p = p;
+      b.setAttribute("role", "radio"); b.setAttribute("aria-checked", hex === col[p]); b.title = nm;
+      const taken = hex === other;
+      if (taken) { b.disabled = true; b.classList.add("taken"); b.title = nm + " (rakipte)"; b.setAttribute("aria-label", nm + ", rakibin rengi"); }
+      else b.setAttribute("aria-label", nm);
+      box.appendChild(b);
+    });
+  });
   $("bName").textContent = d.name || `${names.A} – ${names.B}`;
   $("bStatus").textContent = open ? "Devam ediyor" : "Bitti";
   $("bStatus").classList.toggle("on", open);
@@ -803,6 +866,19 @@ document.querySelectorAll("#vBoard [data-minus]").forEach(el => el.addEventListe
 
 /* ---- Defterde bir kayda dokununca o kaydı geri al (iki dokunuşla) ---- */
 let undoArm = null, undoArmTimer = null;
+/* ---- Renk seçimi: her oyuncu kendi rengini seçer; rakibin rengi alınamaz ---- */
+let colorOpen = null;
+P.forEach(p => $("cb"+p).addEventListener("click", () => { colorOpen = colorOpen === p ? null : p; renderBoard(); }));
+document.querySelectorAll("#vBoard .swatches").forEach(box => box.addEventListener("click", async ev => {
+  const b = ev.target.closest(".sw"); if (!b || b.disabled || !cur?.data) return;
+  const p = b.dataset.p, role = myRole(); if (!(role === "admin" || role === p)) return;
+  const col = colorsOf(cur.data); if (col[p] === b.dataset.c) return;
+  const other = p === "A" ? "B" : "A"; if (col[other] === b.dataset.c) return;
+  const next = { ...col, [p]: b.dataset.c }; colorOpen = null;
+  $("vBoard").style.setProperty("--" + p.toLowerCase(), next[p]);
+  try { await updateDoc(doc(fs, "boards", cur.id), { colors: next }); }
+  catch (e) { note(denied(e) ? "Renk kaydedilemedi. Rakip aynı rengi az önce seçmiş olabilir ya da Firestore kuralları güncel değil." : "Renk kaydedilemedi, tekrar dene."); renderBoard(); }
+}));
 async function tapUndo(id){
   const e = cur.events.find(x => x.id === id), role = myRole(); if (!e || !role) return;
   if (undoArm !== id) { undoArm = id; clearTimeout(undoArmTimer); undoArmTimer = setTimeout(() => { undoArm = null; renderBoard(); }, 3500); renderBoard(); return; }
