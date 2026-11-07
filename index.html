@@ -109,6 +109,10 @@ ol.log li{grid-template-columns:3.2em 1fr auto auto}
 .status.on{border-color:var(--b);color:var(--b)}
 h2.sec{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:6px 0 0}
 .view{display:grid;gap:18px}
+/* Çift dokunuşta yakınlaştırma olmasın (iki parmakla büyütme açık kalır) */
+html,body,button,a,input,label,.p,.bcard{touch-action:manipulation}
+/* iOS odaklanınca yakınlaştırmasın: giriş kutuları en az 16px */
+input,select,textarea{font-size:16px}
 .p{align-content:start}
 .pill{display:inline-block}
 #who{text-transform:none;letter-spacing:0}
@@ -248,7 +252,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v2.3.0";
+const VERSION = "v2.3.1";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 /* ---- Otomatik güncelleme ----
