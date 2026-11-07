@@ -9,15 +9,15 @@
 /* Layout: iki oyuncu yan yana iki "hane" gibi; altta çentik grafiği ve oyun defteri */
 :root{
   --bg:#efe6d6; --surface:#f8f2e7; --ink:#2a1d14; --muted:#7a6656; --line:#d8c8b0;
-  --a:#c2185b; --b:#1f5fae; --a-soft:#f8d7e4; --b-soft:#d6e4f6; --danger:#a3361f;
+  --a:#c2185b; --b:#1f5fae; --a-soft:#f8d7e4; --b-soft:#d6e4f6; --danger:#a3361f; --wa:#1a8d4a;
   --display:"Rozha One",Georgia,serif; --body:"Work Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1c1511; --surface:#271e18; --ink:#f1e6d6; --muted:#a8937f; --line:#3d2f25;
-  --a:#f48fb1; --b:#7fb3f0; --a-soft:#3d1d2a; --b-soft:#18283e; --danger:#ef8a6b; color-scheme:dark}}
+  --a:#f48fb1; --b:#7fb3f0; --a-soft:#3d1d2a; --b-soft:#18283e; --danger:#ef8a6b; --wa:#1f9c55; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1c1511; --surface:#271e18; --ink:#f1e6d6; --muted:#a8937f; --line:#3d2f25;
-  --a:#f48fb1; --b:#7fb3f0; --a-soft:#3d1d2a; --b-soft:#18283e; --danger:#ef8a6b; color-scheme:dark}
+  --a:#f48fb1; --b:#7fb3f0; --a-soft:#3d1d2a; --b-soft:#18283e; --danger:#ef8a6b; --wa:#1f9c55; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
 .wrap{max-width:860px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
 header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
@@ -109,6 +109,9 @@ ol.log li{grid-template-columns:3.2em 1fr auto auto}
 .status.on{border-color:var(--b);color:var(--b)}
 h2.sec{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:6px 0 0}
 .view{display:grid;gap:18px}
+.share{display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 16px;border-radius:6px;font-weight:600;text-decoration:none;background:var(--wa);color:#fff;border:0}
+.share svg{width:22px;height:22px;flex:none}
+.share:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 /* Çift dokunuşta yakınlaştırma olmasın (iki parmakla büyütme açık kalır) */
 html,body,button,a,input,label,.p,.bcard{touch-action:manipulation}
 /* iOS odaklanınca yakınlaştırmasın: giriş kutuları en az 16px */
@@ -128,6 +131,7 @@ input,select,textarea{font-size:16px}
     <h1>SkorBoard</h1>
     <div class="tools">
       <span class="badge hidden" id="who"></span>
+      <button class="link hidden" id="nickOpen">Nick değiştir</button>
       <button class="link hidden" id="pwOpen">Şifre değiştir</button>
       <button class="link hidden" id="logout">Çıkış</button>
     </div>
@@ -147,6 +151,7 @@ input,select,textarea{font-size:16px}
       <button class="primary" type="submit" id="authBtn">Giriş yap</button>
       <p class="err" id="authErr"></p>
     </form>
+    <a class="share" target="_blank" rel="noopener" data-share><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2Z"/></svg>Uygulamayı paylaş</a>
     <div class="panel hidden" id="setupBox">
       <h2>Admin hesabı</h2>
       <p class="rule">Admin hesabı yalnızca bu adresten açılır. Şifreyi belirle ve oluştur.</p>
@@ -157,6 +162,14 @@ input,select,textarea{font-size:16px}
       </form>
     </div>
   </section>
+
+  <form class="panel pw hidden" id="nickForm">
+    <h2>Nick değiştir</h2>
+    <label class="field">Yeni nick<input id="nickNew" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required></label>
+    <p class="hint">3–20 karakter: harf, rakam, nokta, alt çizgi. Skorboardlarında da yeni nick'in görünür.</p>
+    <div class="tools"><button class="primary" type="submit">Kaydet</button><button class="ghost" type="button" id="nickCancel">Vazgeç</button></div>
+    <p class="err" id="nickErr"></p>
+  </form>
 
   <!-- ŞİFRE DEĞİŞTİR (giriş yapınca her sayfada) -->
   <form class="panel pw hidden" id="pwForm">
@@ -173,6 +186,7 @@ input,select,textarea{font-size:16px}
   <!-- ANA SAYFA -->
   <section class="view hidden" id="vHome">
     <button class="big go" id="goNew">Yeni skorboard başlat<span>Rakibini nick'iyle seç, ilk oyunu gir.</span></button>
+    <a class="share" target="_blank" rel="noopener" data-share><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2Z"/></svg>Uygulamayı paylaş</a>
     <h2 class="sec" id="hActive">Devam edenler</h2>
     <div class="cards" id="listActive"></div>
     <h2 class="sec">Bitenler</h2>
@@ -252,7 +266,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v2.3.1";
+const VERSION = "v2.5.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 /* ---- Otomatik güncelleme ----
@@ -294,6 +308,10 @@ const fs = getFirestore(app);
 const $ = id => document.getElementById(id);
 const show = (el, on) => el.classList.toggle("hidden", !on);
 const P = ["A", "B"];
+// WhatsApp ile paylaş: uygulamanın linkini hazır mesajla açar.
+const APP_URL = "https://omery41.github.io/SkorBoard/";
+const SHARE_TEXT = "Tavla skorlarımızı SkorBoard'da tutalım 🎲\n" + APP_URL + "\n\n\"Kayıt ol\" sekmesinden nick ve şifreyle hesap açabilirsin.";
+document.querySelectorAll("[data-share]").forEach(a => { a.href = "https://wa.me/?text=" + encodeURIComponent(SHARE_TEXT); });
 const LAST = "skorboard-son-nick";
 const getLast = () => { try { return localStorage.getItem(LAST) || ""; } catch (e) { return ""; } };
 const setLast = n => { try { localStorage.setItem(LAST, n); } catch (e) {} };
@@ -334,6 +352,18 @@ function authMsg(code){
     "İşlem yapılamadı (" + code + ").";
 }
 
+/* ---- Nick ↔ hesap eşlemesi ----
+   logins/{nick}   → { uid, email }  : girişte nick'ten hesabın e-postası bulunur (herkes tek tek okuyabilir)
+   profiles/{uid}  → { nick, key }   : görünen nick; skorboardlardaki isimler buradan okunur
+   users/{nick}    → eski sürüm kaydı; ilk girişte yeni yapıya taşınıp silinir */
+const loginRef = k => doc(fs, "logins", k);
+const profRef = uid => doc(fs, "profiles", uid);
+async function nickTaken(key){
+  const [a, b] = await Promise.all([getDoc(loginRef(key)), getDoc(doc(fs, "users", key)).catch(() => null)]);
+  return a.exists() || !!(b && b.exists());
+}
+let pendingNick = null, creating = false, loginKey = null;
+
 $("authForm").addEventListener("submit", async e => {
   e.preventDefault(); $("authErr").textContent = "";
   const raw = $("fNick").value.trim(), key = nickKey(raw), pw = $("fPw").value;
@@ -346,19 +376,36 @@ $("authForm").addEventListener("submit", async e => {
   }
   $("authBtn").disabled = true;
   try {
-    if (mode === "in") { await signInWithEmailAndPassword(auth, emailOf(key), toFb(pw)); setLast(raw); }
-    else {
+    if (mode === "in") {
+      let email = emailOf(key);
+      try { const l = await getDoc(loginRef(key)); if (l.exists()) email = l.data().email; } catch (e2) {}
+      loginKey = key;
+      await signInWithEmailAndPassword(auth, email, toFb(pw)); setLast(raw);
+    } else {
+      if (await nickTaken(key)) throw Object.assign(new Error(), { code: "auth/email-already-in-use" });
       pendingNick = raw; creating = true;
-      const cred = await createUserWithEmailAndPassword(auth, emailOf(key), toFb(pw));
+      let cred;
+      try { cred = await createUserWithEmailAndPassword(auth, emailOf(key), toFb(pw)); }
+      catch (e2) {
+        // Bu nick daha önce başkasınındı ve sahibi nick değiştirdi: hesaba farklı bir iç e-posta ver.
+        if (e2.code !== "auth/email-already-in-use") throw e2;
+        cred = await createUserWithEmailAndPassword(auth, emailOf(key + "." + Math.random().toString(36).slice(2, 8)), toFb(pw));
+      }
       setLast(raw);
-      try { await setDoc(doc(fs, "users", key), { uid: cred.user.uid, nick: raw, created: serverTimestamp() }); }
-      catch (e2) { note(denied(e2) ? RULES_MSG : "Hesap açıldı ama nick kaydı tamamlanamadı; bir sonraki girişte tekrar denenecek."); }
-      creating = false;
+      try {
+        const b = writeBatch(fs);
+        b.set(loginRef(key), { uid: cred.user.uid, email: cred.user.email });
+        b.set(profRef(cred.user.uid), { nick: raw, key });
+        await b.commit();
+        me && (me.nick = raw, me.key = key); route();
+      } catch (e2) {
+        await cred.user.delete().catch(() => {});
+        throw Object.assign(new Error(), { code: denied(e2) ? "rules" : "auth/email-already-in-use" });
+      } finally { creating = false; }
     }
-  } catch (err) { creating = false; $("authErr").textContent = authMsg(err.code || ""); }
+  } catch (err) { creating = false; $("authErr").textContent = err.code === "rules" ? RULES_MSG : authMsg(err.code || ""); }
   $("authBtn").disabled = false;
 });
-let pendingNick = null, creating = false;
 
 // Admin hesabı yalnızca #kurulum adresinden açılır.
 $("setupForm").addEventListener("submit", async e => {
@@ -368,7 +415,7 @@ $("setupForm").addEventListener("submit", async e => {
     creating = true;
     const cred = await createUserWithEmailAndPassword(auth, emailOf(ADMIN_KEY), toFb(pw));
     setLast("admin");
-    try { await setDoc(doc(fs, "users", ADMIN_KEY), { uid: cred.user.uid, nick: "Admin", created: serverTimestamp() }); }
+    try { const b = writeBatch(fs); b.set(loginRef(ADMIN_KEY), { uid: cred.user.uid, email: cred.user.email }); b.set(profRef(cred.user.uid), { nick: "Admin", key: ADMIN_KEY }); await b.commit(); }
     catch (e2) { if (denied(e2)) note(RULES_MSG); }
     creating = false;
     location.hash = "ana";
@@ -377,24 +424,94 @@ $("setupForm").addEventListener("submit", async e => {
 
 $("logout").onclick = async () => { await signOut(auth); location.hash = ""; };
 
+// Eski sürümde açılmış hesabı yeni yapıya taşı (bir kez).
+async function migrate(user){
+  const ekey = (user.email || "").split("@")[0];
+  let nick = ekey === ADMIN_KEY ? "Admin" : ekey, key = ekey;
+  const old = await getDoc(doc(fs, "users", ekey)).catch(() => null);
+  if (old && old.exists() && old.data().uid === user.uid) nick = old.data().nick || nick;
+  const l = await getDoc(loginRef(key));
+  const b = writeBatch(fs);
+  if (!l.exists()) b.set(loginRef(key), { uid: user.uid, email: user.email });
+  b.set(profRef(user.uid), { nick, key });
+  if (old && old.exists() && old.data().uid === user.uid) b.delete(doc(fs, "users", ekey));
+  await b.commit();
+  return { nick, key };
+}
+
 onAuthStateChanged(auth, async user => {
   stopBoards(); closeBoard();
-  if (!user) { me = null; route(); return; }
-  const key = (user.email || "").split("@")[0];
-  me = { uid: user.uid, key, nick: pendingNick || key, admin: key === ADMIN_KEY };
-  try {
-    const s = await getDoc(doc(fs, "users", key));
-    if (s.exists()) me.nick = s.data().nick || me.nick;
-    // Kayıt sırasında nick kaydı yazılamadıysa şimdi tamamla (rakipler bu nick'i bulabilsin).
-    else if (!creating) await setDoc(doc(fs, "users", key), { uid: user.uid, nick: me.admin ? "Admin" : me.nick, created: serverTimestamp() });
-  } catch (e) { if (denied(e)) note(RULES_MSG); }
-  pendingNick = null;
+  if (!user) { me = null; loginKey = null; route(); return; }
+  const admin = user.email === emailOf(ADMIN_KEY);
+  me = { uid: user.uid, key: (user.email || "").split("@")[0], nick: pendingNick || "", admin };
+  if (!creating) {
+    try {
+      const s = await getDoc(profRef(user.uid));
+      const p = s.exists() ? s.data() : await migrate(user);
+      // Eski nick'le giriş yapıldıysa (nick değişmişse) kabul etme.
+      if (loginKey && p.key !== loginKey && !admin) {
+        loginKey = null; await signOut(auth);
+        $("authErr").textContent = "Bu nick artık kullanılmıyor. Yeni nick'inle giriş yap."; return;
+      }
+      me.nick = p.nick; me.key = p.key;
+    } catch (e) { if (denied(e)) note(RULES_MSG); me.nick = me.nick || me.key; }
+  }
+  loginKey = null; pendingNick = null;
+  watchProfile();
   startBoards();
   if (!location.hash || location.hash === "#kurulum") location.hash = "ana"; else route();
 });
 
+/* ================= Nick değiştirme ================= */
+$("nickOpen").onclick = () => { show($("nickForm"), true); show($("pwForm"), false); $("nickErr").className = "err"; $("nickErr").textContent = ""; $("nickNew").value = me.nick; $("nickNew").focus(); };
+$("nickCancel").onclick = () => show($("nickForm"), false);
+$("nickForm").addEventListener("submit", async e => {
+  e.preventDefault(); if (!me || me.admin) return;
+  const raw = $("nickNew").value.trim(), key = nickKey(raw), err = $("nickErr");
+  err.className = "err"; err.textContent = "";
+  if (!validKey(key)) { err.textContent = "Nick 3–20 karakter olmalı; harf, rakam, nokta ve alt çizgi kullanılabilir."; return; }
+  if (key === ADMIN_KEY) { err.textContent = "Bu nick ayrılmış, başka bir nick seç."; return; }
+  if (raw === me.nick) { show($("nickForm"), false); return; }
+  try {
+    const b = writeBatch(fs);
+    if (key !== me.key) {
+      if (await nickTaken(key)) { err.textContent = "Bu nick alınmış, başka bir nick seç."; return; }
+      b.set(loginRef(key), { uid: me.uid, email: auth.currentUser.email });
+      b.delete(loginRef(me.key));
+    }
+    b.set(profRef(me.uid), { nick: raw, key });
+    await b.commit();
+    me.nick = raw; me.key = key; setLast(raw); profiles.set(me.uid, raw);
+    err.className = "ok"; err.textContent = "Nick'in " + raw + " oldu. Bundan sonra bu nick'le giriş yap.";
+    route(); show($("nickForm"), true);
+    setTimeout(() => show($("nickForm"), false), 2500);
+  } catch (e2) { err.textContent = denied(e2) ? RULES_MSG : "Nick değiştirilemedi. Bu nick az önce alınmış olabilir."; }
+});
+
+/* ---- Profiller: skorboardlarda görünen isimler canlı okunur ---- */
+const profiles = new Map(), profSubs = new Map();
+function watchProfile(){ if (me) ensureProfiles([me.uid]); }
+function ensureProfiles(uids){
+  for (const uid of uids) {
+    if (!uid || profSubs.has(uid)) continue;
+    profSubs.set(uid, onSnapshot(profRef(uid), s => {
+      if (!s.exists()) return;
+      const n = s.data().nick; if (profiles.get(uid) === n) return;
+      profiles.set(uid, n);
+      if (me && uid === me.uid && !me.admin) { me.nick = n; $("who").textContent = n; }
+      if (!$("vHome").classList.contains("hidden")) renderHome();
+      if (cur) renderBoard();
+    }, () => {}));
+  }
+}
+function stopProfiles(){ profSubs.forEach(u => u()); profSubs.clear(); profiles.clear(); }
+function boardNames(b){
+  const p = b.players || [];
+  return { A: profiles.get(p[0]) || b.nicks?.A || "?", B: profiles.get(p[1]) || b.nicks?.B || "?" };
+}
+
 /* ================= Şifre değiştirme ================= */
-$("pwOpen").onclick = () => { show($("pwForm"), true); $("pwErr").className = "err"; $("pwErr").textContent = ""; $("pwOld").focus(); };
+$("pwOpen").onclick = () => { show($("nickForm"), false); show($("pwForm"), true); $("pwErr").className = "err"; $("pwErr").textContent = ""; $("pwOld").focus(); };
 $("pwCancel").onclick = () => { show($("pwForm"), false); $("pwForm").reset(); };
 $("pwForm").addEventListener("submit", async e => {
   e.preventDefault(); const u = auth.currentUser; if (!u) return;
@@ -417,7 +534,8 @@ function route(){
   let v = "vLogin";
   if (me) v = h === "yeni" ? "vNew" : h.startsWith("b-") ? "vBoard" : "vHome";
   views.forEach(x => show($(x), x === v));
-  show($("who"), !!me); show($("logout"), !!me); show($("pwOpen"), !!me);
+  show($("who"), !!me); show($("logout"), !!me); show($("pwOpen"), !!me); show($("nickOpen"), !!me && !me.admin);
+  if (!me) show($("nickForm"), false);
   if (me) $("who").textContent = me.admin ? "Admin" : me.nick;
   show($("setupBox"), !me && h === "kurulum");
   if (!me) {
@@ -431,12 +549,13 @@ function route(){
 }
 
 /* ================= Skorboard listesi ================= */
-function stopBoards(){ unsubBoards.forEach(u => u()); unsubBoards = []; boards = new Map(); scoreSubs.forEach(u => u()); scoreSubs.clear(); totals.clear(); }
+function stopBoards(){ stopProfiles(); unsubBoards.forEach(u => u()); unsubBoards = []; boards = new Map(); scoreSubs.forEach(u => u()); scoreSubs.clear(); totals.clear(); }
 function startBoards(){
   const q = me.admin ? collection(fs, "boards") : query(collection(fs, "boards"), where("players", "array-contains", me.uid));
   unsubBoards.push(onSnapshot(q, s => {
     boards = new Map(s.docs.map(d => [d.id, { id: d.id, ...d.data({ serverTimestamps: "estimate" }) }]));
     syncScoreSubs();
+    ensureProfiles([...boards.values()].flatMap(b => b.players || []));
     if (!$("vHome").classList.contains("hidden")) renderHome();
     if (cur && boards.has(cur.id)) { cur.data = boards.get(cur.id); renderBoard(); }
   }, e => note(denied(e) ? RULES_MSG : "Skorboardlar yüklenemedi. Bağlantını kontrol edip sayfayı yenile.")));
@@ -447,8 +566,9 @@ function card(b){
   el.innerHTML = `<span class="vs"><span class="a"></span> – <span class="b"></span></span><span class="sc"></span><span class="meta"></span>`;
   const t = totals.get(b.id);
   el.querySelector(".sc").textContent = t ? `${Math.floor(t.A/5)} – ${Math.floor(t.B/5)}` : "›";
-  el.querySelector(".a").textContent = b.nicks?.A || "?";
-  el.querySelector(".b").textContent = b.nicks?.B || "?";
+  const nm = boardNames(b);
+  el.querySelector(".a").textContent = nm.A;
+  el.querySelector(".b").textContent = nm.B;
   el.querySelector(".meta").textContent = (b.name ? b.name + " · " : "") + fmtDate(b.created) + " tarihinde başladı";
   el.onclick = () => { location.hash = "b-" + b.id; };
   return el;
@@ -488,8 +608,14 @@ async function lookup(raw){
   const key = nickKey(raw);
   if (key === ADMIN_KEY) throw new Error("Admin bir skorboardda oyuncu olamaz. Kayıtlı bir oyuncunun nick'ini yaz.");
   if (!validKey(key)) return null;
-  const s = await getDoc(doc(fs, "users", key));
-  return s.exists() ? { key, ...s.data() } : null;
+  const l = await getDoc(loginRef(key));
+  if (l.exists()) {
+    const uid = l.data().uid; const p = await getDoc(profRef(uid));
+    return { key, uid, nick: p.exists() ? p.data().nick : key };
+  }
+  // Henüz yeni yapıya taşınmamış eski hesap
+  const s = await getDoc(doc(fs, "users", key)).catch(() => null);
+  return s && s.exists() ? { key, ...s.data() } : null;
 }
 let checkSeq = 0;
 async function liveCheck(){
@@ -558,7 +684,8 @@ function renderBoard(){
   if (!cur || $("vBoard").classList.contains("hidden")) return;
   const d = cur.data; if (!d) { $("bName").textContent = "Yükleniyor…"; return; }
   const role = myRole(), open = d.status !== "done";
-  const names = { A: d.nicks?.A || "?", B: d.nicks?.B || "?" };
+  ensureProfiles(d.players || []);
+  const names = boardNames(d);
   $("bName").textContent = d.name || `${names.A} – ${names.B}`;
   $("bStatus").textContent = open ? "Devam ediyor" : "Bitti";
   $("bStatus").classList.toggle("on", open);
@@ -627,7 +754,7 @@ document.querySelectorAll("#vBoard .btns button[data-w]").forEach(b => b.addEven
 }));
 let undoTarget = null;
 $("undoBtn").onclick = () => {
-  const role = myRole(); const names = cur.data.nicks || {};
+  const role = myRole(); const names = boardNames(cur.data);
   undoTarget = derive(cur.events).live.filter(e => role === e.player).pop(); if (!undoTarget) return;
   $("undoWhat").textContent = `${names[undoTarget.player]} ${undoTarget.n===2?"+2 (mars)":"+1"} · ${fmt(undoTarget.t)} geri alınsın mı? Defterde görünecek.`;
   show($("undoAsk"), true); show($("undoBtn"), false);
