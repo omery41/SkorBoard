@@ -2,48 +2,67 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() { return request.auth != null; }
-    function isAdmin()  { return signedIn() && request.auth.token.email == 'admin@tavla.test'; }
-    function isPlayer(p) {
-      return signedIn() && (
-        (p == 'A' && request.auth.token.email == 'pervin@tavla.test') ||
-        (p == 'B' && request.auth.token.email == 'emin@tavla.test'));
+    function signedIn() {
+      return request.auth != null;
     }
-    // Admin her şeyi girer; oyuncu sadece kendi adına, sunucu saatiyle.
+    function emailIs(e) {
+      return signedIn() && request.auth.token.email == e;
+    }
+    function isAdmin() {
+      return emailIs('admin@tavla.test');
+    }
+    function isPervin() {
+      return emailIs('pervin@tavla.test');
+    }
+    function isEmin() {
+      return emailIs('emin@tavla.test');
+    }
+    function isPlayer(p) {
+      return (p == 'A' && isPervin()) || (p == 'B' && isEmin());
+    }
+    function adminWrite(d) {
+      return isAdmin() && d.by == 'admin' && d.t is timestamp;
+    }
+    function playerWrite(d) {
+      return isPlayer(d.player) && d.by == d.player && d.t == request.time;
+    }
     function actorOk(d) {
-      return (isAdmin() && d.by == 'admin' && d.t is timestamp)
-          || (isPlayer(d.player) && d.by == d.player && d.t == request.time);
+      return adminWrite(d) || playerWrite(d);
+    }
+    function validWin(d) {
+      return d.keys().hasOnly(['type', 'player', 'n', 'by', 't'])
+        && d.type == 'win'
+        && d.player in ['A', 'B']
+        && d.n in [1, 2];
+    }
+    function targetPath(d) {
+      return /databases/$(database)/documents/events/$(d.target);
+    }
+    function validUndo(id, d) {
+      return d.keys().hasOnly(['type', 'player', 'target', 'by', 't'])
+        && d.type == 'undo'
+        && d.target is string
+        && id == 'undo-' + d.target
+        && exists(targetPath(d))
+        && get(targetPath(d)).data.type == 'win'
+        && get(targetPath(d)).data.player == d.player;
+    }
+    function validNames(d) {
+      return d.keys().hasOnly(['A', 'B'])
+        && d.A is string && d.A.size() <= 30
+        && d.B is string && d.B.size() <= 30;
     }
 
-    // Skor isimleri: herkes okur, sadece Admin değiştirir.
     match /config/{id} {
       allow read: if true;
-      allow write: if isAdmin()
-        && request.resource.data.keys().hasOnly(['A','B'])
-        && request.resource.data.A is string && request.resource.data.A.size() <= 30
-        && request.resource.data.B is string && request.resource.data.B.size() <= 30;
+      allow write: if isAdmin() && validNames(request.resource.data);
     }
 
-    // İşlem defteri: sadece ekleme yapılır, hiçbir kayıt değiştirilmez ya da silinmez.
     match /events/{id} {
       allow read: if true;
       allow update, delete: if false;
-
-      allow create: if actorOk(request.resource.data) && (
-        // Galibiyet: +1 ya da mars +2
-        (request.resource.data.keys().hasOnly(['type','player','n','by','t'])
-          && request.resource.data.type == 'win'
-          && request.resource.data.player in ['A','B']
-          && request.resource.data.n in [1, 2])
-        ||
-        // Geri alma: aynı oyuncunun bir galibiyetini işaretler; her çentik bir kez geri alınır
-        (request.resource.data.keys().hasOnly(['type','player','target','by','t'])
-          && request.resource.data.type == 'undo'
-          && id == 'undo-' + request.resource.data.target
-          && exists(/databases/$(database)/documents/events/$(request.resource.data.target))
-          && get(/databases/$(database)/documents/events/$(request.resource.data.target)).data.type == 'win'
-          && get(/databases/$(database)/documents/events/$(request.resource.data.target)).data.player == request.resource.data.player)
-      );
+      allow create: if actorOk(request.resource.data)
+        && (validWin(request.resource.data) || validUndo(id, request.resource.data));
     }
   }
 }
