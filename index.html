@@ -114,6 +114,10 @@ h2.sec{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:6px 0
 .p.can [data-minus]:active{background:var(--line)}
 .p [data-minus].armed{outline:2px dashed var(--danger);outline-offset:4px}
 .arm-hint{margin:-4px 0 0;font-size:.8rem;color:var(--danger);min-height:1.1em}
+ol.log li.tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
+ol.log li.tap:active{background:var(--line)}
+ol.log li.armed{outline:2px dashed var(--danger);outline-offset:-2px;border-radius:4px}
+.tap-hint{display:block;font-size:.78rem;color:var(--danger);margin-top:2px}
 .share{display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 16px;border-radius:6px;font-weight:600;text-decoration:none;background:var(--wa);color:#fff;border:0}
 .share svg{width:22px;height:22px;flex:none}
 .share:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -247,10 +251,7 @@ input,select,textarea{font-size:16px}
 
     <section>
       <h2>Oyun defteri</h2>
-      <div class="undo hidden" id="undoBox" style="margin:0 0 10px">
-        <button class="ghost" id="undoBtn">Son kaydı geri al</button>
-        <span class="hidden" id="undoAsk"><span id="undoWhat"></span> <button class="danger" id="undoYes">Geri al</button> <button class="ghost" id="undoNo">Vazgeç</button></span>
-      </div>
+      <p class="hint" id="logHint"></p>
       <ol class="log" id="log"></ol>
       <div class="empty" id="empty">Henüz oyun girilmedi.</div>
     </section>
@@ -273,7 +274,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v2.7.0";
+const VERSION = "v2.8.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 /* ---- Otomatik güncelleme ----
@@ -744,13 +745,16 @@ function renderBoard(){
       li.innerHTML = `<span class="num">↺</span><span><span class="pill undo">Geri alındı</span> <span class="txt"></span></span><span class="when">${fmt(e.t)}</span>`;
       li.querySelector(".txt").textContent = `${who(e.by)}, #${winNo.get(e.target) || "?"} ${t ? names[t.player] + label(t.n) : ""} kaydını geri aldı`;
     } else return;
+    if (e.type === "win" && open && !undone.has(e.id) && (role === "admin" || role === e.player)) {
+      li.classList.add("tap"); li.dataset.undo = e.id;
+      if (undoArm === e.id) { li.classList.add("armed"); const h = document.createElement("span"); h.className = "tap-hint"; h.textContent = "Geri almak için tekrar dokun"; li.querySelector("span:nth-child(2)").appendChild(h); }
+    }
     if (role === "admin") { const b = document.createElement("button"); b.className = "del" + (pendingDel === e.id ? " sure" : ""); b.dataset.id = e.id; b.textContent = pendingDel === e.id ? "Emin misin?" : "Sil"; li.appendChild(b); }
     else li.appendChild(document.createElement("span"));
     log.appendChild(li);
   });
   show($("empty"), cur.events.length === 0);
-  const last = live.filter(e => role === "admin" || role === e.player).pop();
-  show($("undoBox"), open && role && role !== "admin" && !!last);
+  $("logHint").textContent = open && role && live.length ? "Geri almak istediğin kayda dokun; geri alma deftere yazılır." : "";
   $("toggleDone").textContent = open ? "Skorboardu bitir" : "Yeniden aç";
   show($("toggleDone"), !!role);
   show($("delBoard"), role === "admin");
@@ -797,21 +801,19 @@ document.querySelectorAll("#vBoard [data-minus]").forEach(el => el.addEventListe
   busy = false;
 }));
 
-let undoTarget = null;
-$("undoBtn").onclick = () => {
-  const role = myRole(); const names = boardNames(cur.data);
-  undoTarget = derive(cur.events).live.filter(e => role === e.player).pop(); if (!undoTarget) return;
-  $("undoWhat").textContent = `${names[undoTarget.player]} ${label(undoTarget.n).trim()}${undoTarget.n===2?" (mars)":""} · ${fmt(undoTarget.t)} geri alınsın mı? Defterde görünecek.`;
-  show($("undoAsk"), true); show($("undoBtn"), false);
-};
-$("undoNo").onclick = () => { show($("undoAsk"), false); show($("undoBtn"), true); };
-$("undoYes").onclick = async () => {
-  show($("undoAsk"), false); show($("undoBtn"), true); const t = undoTarget; if (!t || !cur) return;
-  try { await setDoc(doc(evCol(), "undo-" + t.id), { type: "undo", player: t.player, target: t.id, by: myRole(), t: serverTimestamp() }); }
-  catch (e) { note("Geri alınamadı. Bu çentik zaten geri alınmış olabilir."); }
-};
+/* ---- Defterde bir kayda dokununca o kaydı geri al (iki dokunuşla) ---- */
+let undoArm = null, undoArmTimer = null;
+async function tapUndo(id){
+  const e = cur.events.find(x => x.id === id), role = myRole(); if (!e || !role) return;
+  if (undoArm !== id) { undoArm = id; clearTimeout(undoArmTimer); undoArmTimer = setTimeout(() => { undoArm = null; renderBoard(); }, 3500); renderBoard(); return; }
+  undoArm = null; clearTimeout(undoArmTimer);
+  try { await setDoc(doc(evCol(), "undo-" + e.id), { type: "undo", player: e.player, target: e.id, by: role, t: serverTimestamp() }); }
+  catch (err) { note(denied(err) ? "Geri alınamadı. Bu kayıt zaten geri alınmış olabilir." : "Geri alınamadı, tekrar dene."); renderBoard(); }
+}
 $("log").addEventListener("click", async ev => {
-  const b = ev.target.closest(".del"); if (!b || myRole() !== "admin") return;
+  const b = ev.target.closest(".del");
+  if (!b) { const li = ev.target.closest("li.tap"); if (li) tapUndo(li.dataset.undo); return; }
+  if (myRole() !== "admin") return;
   const id = b.dataset.id;
   if (pendingDel !== id) { pendingDel = id; clearTimeout(pendingTimer); pendingTimer = setTimeout(() => { pendingDel = null; renderBoard(); }, 4000); renderBoard(); return; }
   pendingDel = null; clearTimeout(pendingTimer);
