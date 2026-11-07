@@ -248,8 +248,29 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v2.2.0";
+const VERSION = "v2.3.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
+
+/* ---- Otomatik güncelleme ----
+   Sunucudaki sayfanın sürümüne önbelleği atlayarak bakar; yeni sürüm varsa sayfayı yeniler.
+   Uygulamaya her geri dönüldüğünde ve açıkken 2 dakikada bir kontrol eder. */
+let updChecking = false;
+async function checkUpdate(){
+  if (updChecking || !navigator.onLine) return; updChecking = true;
+  try {
+    const r = await fetch(location.pathname + "?t=" + Date.now(), { cache: "no-store" });
+    const m = (await r.text()).match(/const VERSION = "(v[0-9.]+)"/);
+    if (m && m[1] !== VERSION) {
+      const typing = document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.value;
+      if (typing) { setTimeout(checkUpdate, 30000); return; }   // yazı yazılırken bölme
+      location.replace(location.pathname + "?v=" + m[1].replace(/[^0-9]/g, "") + location.hash);
+    }
+  } catch (e) {} finally { updChecking = false; }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
+window.addEventListener("focus", checkUpdate);
+setInterval(checkUpdate, 120000);
+setTimeout(checkUpdate, 3000);
 
 const DOMAIN = "skorboard.test";
 const ADMIN_KEY = "admin";
