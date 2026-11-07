@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tavla Çentik Tablosu</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: iki oyuncu yan yana iki "hane" gibi; altta çentik grafiği ve oyun defteri */
+:root{
+  --bg:#efe6d6; --surface:#f8f2e7; --ink:#2a1d14; --muted:#7a6656; --line:#d8c8b0;
+  --a:#c2185b; --b:#1f5fae; --a-soft:#f8d7e4; --b-soft:#d6e4f6; --danger:#a3361f;
+  --display:"Rozha One",Georgia,serif; --body:"Work Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1c1511; --surface:#271e18; --ink:#f1e6d6; --muted:#a8937f; --line:#3d2f25;
+  --a:#f48fb1; --b:#7fb3f0; --a-soft:#3d1d2a; --b-soft:#18283e; --danger:#ef8a6b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1c1511; --surface:#271e18; --ink:#f1e6d6; --muted:#a8937f; --line:#3d2f25;
+  --a:#f48fb1; --b:#7fb3f0; --a-soft:#3d1d2a; --b-soft:#18283e; --danger:#ef8a6b; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+h1{font-family:var(--display);font-weight:400;font-size:2rem;margin:0;line-height:1.1;text-wrap:balance}
+.role{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rule{font-size:.85rem;color:var(--muted);margin:0}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.p{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:grid;gap:12px;min-width:0}
+.p.A{border-top:5px solid var(--a)} .p.B{border-top:5px solid var(--b)}
+.name{font-weight:600;font-size:1.05rem;background:none;border:0;border-bottom:1px dashed transparent;color:var(--ink);font-family:var(--body);width:100%;padding:0}
+.name:not([readonly]):hover,.name:focus{border-bottom-color:var(--line);outline:none}
+.score{font-family:var(--display);font-size:4.2rem;line-height:.9;font-variant-numeric:tabular-nums}
+.A .score{color:var(--a)} .B .score{color:var(--b)}
+.score small{font-family:var(--body);font-size:.8rem;color:var(--muted);margin-left:6px}
+.tally{height:34px;display:flex;align-items:center;gap:6px}
+.tally svg{height:34px;width:auto}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{font-family:var(--body);font-size:.92rem;font-weight:600;border-radius:5px;padding:9px 12px;cursor:pointer;border:1px solid transparent}
+button:focus-visible,.name:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.A .win{background:var(--a);color:var(--surface)} .B .win{background:var(--b);color:var(--surface)}
+.A .mars{background:var(--a-soft);color:var(--a);border-color:var(--a)} .B .mars{background:var(--b-soft);color:var(--b);border-color:var(--b)}
+button:disabled{opacity:.45;cursor:default}
+.lead{text-align:center;font-size:.9rem;color:var(--muted);margin:-8px 0 0}
+section h2{font-family:var(--display);font-weight:400;font-size:1.3rem;margin:0 0 8px}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:300px;height:auto}
+.legend{display:flex;gap:16px;font-size:.82rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:3px;vertical-align:middle;margin-right:5px}
+ol.log{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--line)}
+ol.log li{display:grid;grid-template-columns:3.2em 1fr auto;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);align-items:baseline}
+.num,.when{font-family:var(--mono);font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill{font-size:.72rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;margin-left:6px}
+.pill.mars{background:var(--ink);color:var(--bg)}
+.undo{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:.88rem}
+.ghost{background:none;border-color:var(--line);color:var(--ink)}
+.danger{background:var(--danger);color:var(--surface)}
+.note{font-size:.88rem;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:6px;padding:10px 12px}
+.empty{color:var(--muted);font-size:.9rem;padding:12px 0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;gap:10px}
+.panel h2{margin:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.slot{font-size:.9rem}.slot b{font-weight:600}
+.badge{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:var(--ink);color:var(--bg)}
+.small{font-size:.82rem;padding:6px 10px}
+.p.locked .btns{display:none}
+@media (max-width:480px){.score{font-size:3.4rem}.p{padding:12px}h1{font-size:1.6rem}}
+@media (prefers-reduced-motion:no-preference){.score{transition:transform .2s}.bump{transform:scale(1.08)}}
+
+.hidden{display:none!important}
+.login{max-width:440px;margin:0 auto;display:grid;gap:14px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice{padding:16px 12px;font-size:1rem;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-align:left}
+.choice[aria-pressed="true"]{outline:2px solid var(--ink)}
+.choice.A{border-left:6px solid var(--a)}.choice.B{border-left:6px solid var(--b)}
+.choice.adm{border-left:6px solid var(--ink)}.choice.view{border-left:6px solid var(--muted)}
+.field{display:grid;gap:4px;font-size:.88rem;color:var(--muted)}
+.field input{font:inherit;font-size:1rem;padding:10px;border-radius:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.primary{background:var(--ink);color:var(--bg)}
+.err{color:var(--danger);font-size:.88rem;min-height:1.2em;margin:0}
+.ok{color:var(--b);font-size:.88rem;margin:0}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.link{background:none;border:0;padding:4px 2px;color:var(--muted);font-weight:500;text-decoration:underline;font-size:.85rem}
+ol.log li.undone .what{text-decoration:line-through;opacity:.6}
+.pill.undo{background:var(--danger);color:var(--surface)}
+.pw{display:grid;gap:10px;max-width:360px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tavla Çentik Tablosu</h1>
+    <div class="tools">
+      <span class="badge hidden" id="role"></span>
+      <button class="link hidden" id="pwOpen">Şifre değiştir</button>
+      <button class="link hidden" id="logout">Çıkış</button>
+    </div>
+  </header>
+
+  <!-- GİRİŞ -->
+  <section class="login hidden" id="loginView">
+    <p class="rule">Nasıl girmek istiyorsun?</p>
+    <div class="choices">
+      <button class="choice A" data-role="A">Pervin olarak gir</button>
+      <button class="choice B" data-role="B">Emin olarak gir</button>
+      <button class="choice adm" data-role="admin">Admin olarak gir</button>
+      <button class="choice view" data-role="viewer">İzleyici olarak gir</button>
+    </div>
+    <form class="pw hidden" id="loginForm">
+      <label class="field">Şifre<input type="password" id="loginPw" inputmode="numeric" autocomplete="current-password" required></label>
+      <button class="primary" type="submit" id="loginBtn">Giriş yap</button>
+      <p class="err" id="loginErr"></p>
+    </form>
+  </section>
+
+  <!-- SKOR -->
+  <div id="boardView" class="hidden" style="display:grid;gap:22px">
+    <p class="rule">Her oyunun galibi 1 çentik atar, mars yapan 2 çentik. 5 çentik = 1 skor.</p>
+
+    <form class="panel pw hidden" id="pwForm">
+      <h2>Şifre değiştir</h2>
+      <label class="field">Mevcut şifre<input type="password" id="pwOld" autocomplete="current-password" required></label>
+      <label class="field">Yeni şifre (en az 4 karakter)<input type="password" id="pwNew" autocomplete="new-password" minlength="4" required></label>
+      <label class="field">Yeni şifre tekrar<input type="password" id="pwNew2" autocomplete="new-password" minlength="4" required></label>
+      <div class="tools"><button class="primary" type="submit">Kaydet</button><button class="ghost" type="button" id="pwCancel">Vazgeç</button></div>
+      <p class="err" id="pwErr"></p>
+    </form>
+
+    <div class="players">
+      <div class="p A locked">
+        <input class="name" id="nameA" value="Pervin" readonly aria-label="Birinci oyuncunun adı">
+        <div class="score" id="scoreA">0<small>skor</small></div>
+        <div class="tally" id="tallyA"></div>
+        <div class="btns"><button class="win" data-w="A" data-n="1">Kazandı +1</button><button class="mars" data-w="A" data-n="2">Mars +2</button></div>
+      </div>
+      <div class="p B locked">
+        <input class="name" id="nameB" value="Emin" readonly aria-label="İkinci oyuncunun adı">
+        <div class="score" id="scoreB">0<small>skor</small></div>
+        <div class="tally" id="tallyB"></div>
+        <div class="btns"><button class="win" data-w="B" data-n="1">Kazandı +1</button><button class="mars" data-w="B" data-n="2">Mars +2</button></div>
+      </div>
+    </div>
+    <p class="lead" id="lead"></p>
+    <div class="note hidden" id="note"></div>
+
+    <section>
+      <h2>Zaman içinde</h2>
+      <div class="chart"><svg id="chart" viewBox="0 0 640 240" role="img" aria-label="Oyun sayısına göre toplam çentik"></svg>
+        <div class="legend"><span><i style="background:var(--a)"></i><span id="lgA">Pervin</span></span><span><i style="background:var(--b)"></i><span id="lgB">Emin</span></span><span>Yatay çizgiler: her 5 çentik = 1 skor</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Oyun defteri</h2>
+      <div class="undo hidden" id="undoBox" style="margin:0 0 10px">
+        <button class="ghost" id="undoBtn">Son çentiği geri al</button>
+        <span class="hidden" id="undoAsk"><span id="undoWhat"></span> <button class="danger" id="undoYes">Geri al</button> <button class="ghost" id="undoNo">Vazgeç</button></span>
+      </div>
+      <ol class="log" id="log"></ol>
+      <div class="empty" id="empty">Henüz oyun girilmedi.</div>
+    </section>
+
+    <section class="panel hidden" id="adminBox">
+      <h2>Admin</h2>
+      <p class="rule">İsimleri kartların üstüne dokunarak değiştirebilirsin.</p>
+    </section>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, query, orderBy, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+// Hesaplar Firebase konsolunda bu e-postalarla açılır (KURULUM.md).
+const ACCOUNTS = { admin: "admin@tavla.test", A: "pervin@tavla.test", B: "emin@tavla.test" };
+// Firebase en az 6 karakterlik şifre ister; ekrandaki şifrenin başına sabit bir ek konur.
+const toFb = p => "tavla-" + p;
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const fs = getFirestore(app);
+const $ = id => document.getElementById(id);
+const show = (el, on) => el.classList.toggle("hidden", !on);
+const P = ["A", "B"];
+
+let role = null;          // "admin" | "A" | "B" | "viewer" | null
+let picked = null;
+let events = [], names = { A: "Pervin", B: "Emin" }, prev = { A: 0, B: 0 }, busy = false, started = false;
+
+function viewerSaved(){ try { return localStorage.getItem("tavla-izleyici") === "1"; } catch(e){ return false; } }
+function setViewerSaved(on){ try { on ? localStorage.setItem("tavla-izleyici","1") : localStorage.removeItem("tavla-izleyici"); } catch(e){} }
+
+/* ---------- giriş ---------- */
+document.querySelectorAll(".choice").forEach(b => b.addEventListener("click", () => {
+  picked = b.dataset.role;
+  document.querySelectorAll(".choice").forEach(x => x.setAttribute("aria-pressed", x === b));
+  $("loginErr").textContent = "";
+  if (picked === "viewer") { setViewerSaved(true); enter("viewer"); return; }
+  show($("loginForm"), true); $("loginPw").value = ""; $("loginPw").focus();
+}));
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault(); if (!picked || picked === "viewer") return;
+  $("loginBtn").disabled = true; $("loginErr").textContent = "";
+  try { await signInWithEmailAndPassword(auth, ACCOUNTS[picked], toFb($("loginPw").value)); }
+  catch (err) {
+    $("loginErr").textContent = err.code === "auth/too-many-requests" ? "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene." :
+      err.code === "auth/network-request-failed" ? "İnternet bağlantısı yok gibi görünüyor." : "Şifre yanlış.";
+  }
+  $("loginBtn").disabled = false;
+});
+$("logout").onclick = async () => { setViewerSaved(false); if (auth.currentUser) await signOut(auth); else enter(null); };
+
+function roleOf(user){ if (!user) return null; const e = (user.email||"").toLowerCase(); return Object.keys(ACCOUNTS).find(k => ACCOUNTS[k] === e) || null; }
+
+onAuthStateChanged(auth, user => {
+  const r = roleOf(user);
+  if (r) { setViewerSaved(false); enter(r); }
+  else enter(viewerSaved() ? "viewer" : null);
+});
+
+function enter(r){
+  role = r;
+  show($("loginView"), !r); show($("boardView"), !!r);
+  $("boardView").style.display = r ? "grid" : "";
+  show($("role"), !!r); show($("logout"), !!r);
+  show($("pwOpen"), !!r && r !== "viewer"); show($("pwForm"), false);
+  $("logout").textContent = r === "viewer" ? "Giriş ekranı" : "Çıkış";
+  if (!r) { show($("loginForm"), false); document.querySelectorAll(".choice").forEach(x => x.setAttribute("aria-pressed","false")); return; }
+  startData(); render();
+}
+
+/* ---------- şifre değiştirme ---------- */
+$("pwOpen").onclick = () => { show($("pwForm"), true); $("pwErr").textContent = ""; $("pwErr").className = "err"; $("pwOld").focus(); };
+$("pwCancel").onclick = () => { show($("pwForm"), false); $("pwForm").reset(); };
+$("pwForm").addEventListener("submit", async e => {
+  e.preventDefault(); const u = auth.currentUser; if (!u) return;
+  const o = $("pwOld").value, n = $("pwNew").value, n2 = $("pwNew2").value;
+  if (n !== n2) { $("pwErr").textContent = "Yeni şifreler aynı değil."; return; }
+  if (n.length < 4) { $("pwErr").textContent = "Yeni şifre en az 4 karakter olmalı."; return; }
+  try {
+    await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, toFb(o)));
+    await updatePassword(u, toFb(n));
+    $("pwForm").reset(); $("pwErr").className = "ok"; $("pwErr").textContent = "Şifren değişti.";
+    setTimeout(() => show($("pwForm"), false), 1500);
+  } catch (err) {
+    $("pwErr").className = "err";
+    $("pwErr").textContent = (err.code||"").includes("wrong-password") || (err.code||"").includes("invalid-credential") ? "Mevcut şifre yanlış." : "Şifre değiştirilemedi, tekrar dene.";
+  }
+});
+
+/* ---------- veri ---------- */
+function startData(){
+  if (started) return; started = true;
+  onSnapshot(query(collection(fs, "events"), orderBy("t")), s => {
+    events = s.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) }));
+    note(""); render();
+  }, () => note("Skorlar yüklenemedi. Bağlantını kontrol edip sayfayı yenile."));
+  onSnapshot(doc(fs, "config", "main"), s => { if (s.exists()) { const x = s.data(); names = { A: x.A || names.A, B: x.B || names.B }; render(); } }, () => {});
+}
+const ms = t => t && t.toMillis ? t.toMillis() : (typeof t === "number" ? t : Date.now());
+function derive(){
+  const undone = new Map();
+  events.filter(e => e.type === "undo").forEach(e => undone.set(e.target, e));
+  const wins = events.filter(e => e.type === "win" && (e.player === "A" || e.player === "B") && (e.n === 1 || e.n === 2));
+  const live = wins.filter(e => !undone.has(e.id));
+  return { undone, wins, live };
+}
+function canUndo(e){ return role === "admin" || role === e.player; }
+const who = by => by === "admin" ? "Admin" : names[by] || by;
+
+function note(t){ $("note").textContent = t; show($("note"), !!t); }
+function tallySvg(k,color){ let s='<svg viewBox="0 0 60 34" aria-hidden="true">'; for(let i=0;i<4;i++){const x=8+i*12; s+=`<line x1="${x}" y1="4" x2="${x}" y2="30" stroke="${i<k?color:'var(--line)'}" stroke-width="3.2" stroke-linecap="round"/>`;} return s+'</svg>'; }
+function fmt(t){ const d = new Date(ms(t)); return d.toLocaleDateString("tr-TR",{day:"2-digit",month:"short"})+" "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}); }
+
+function render(){
+  if (!role) return;
+  const { undone, live } = derive();
+  const tot = { A:0, B:0 }, series = { A:[0], B:[0] };
+  live.forEach(g => { tot[g.player] += g.n; series.A.push(tot.A); series.B.push(tot.B); });
+  P.forEach(p => {
+    const sc = Math.floor(tot[p]/5), el = $("score"+p);
+    el.innerHTML = sc + "<small>skor · " + tot[p] + " çentik</small>";
+    if (sc !== prev[p]) { el.classList.add("bump"); setTimeout(() => el.classList.remove("bump"), 220); prev[p] = sc; }
+    $("tally"+p).innerHTML = tallySvg(tot[p]%5, `var(--${p.toLowerCase()})`) + `<span class="num">${tot[p]%5}/5</span>`;
+    if (document.activeElement !== $("name"+p)) $("name"+p).value = names[p];
+    $("name"+p).readOnly = role !== "admin";
+    $("lg"+p).textContent = names[p];
+    document.querySelector(".p."+p).classList.toggle("locked", !(role === "admin" || role === p));
+  });
+  $("role").textContent = role === "admin" ? "Admin" : role === "viewer" ? "İzleyici" : names[role];
+  const sA = Math.floor(tot.A/5), sB = Math.floor(tot.B/5);
+  $("lead").textContent = live.length ? (sA === sB ? `Skor eşit · ${live.length} oyun` : `${sA > sB ? names.A : names.B} ${Math.abs(sA-sB)} skor önde · ${live.length} oyun`) : "";
+
+  // defter: tüm işlemler, en yenisi üstte
+  const log = $("log"); log.innerHTML = "";
+  const winNo = new Map(); let k = 0; events.forEach(e => { if (e.type === "win") winNo.set(e.id, ++k); });
+  events.slice().reverse().slice(0, 80).forEach(e => {
+    const li = document.createElement("li");
+    if (e.type === "win") {
+      if (undone.has(e.id)) li.className = "undone";
+      li.innerHTML = `<span class="num">#${winNo.get(e.id)}</span><span><span class="what"><b style="color:var(--${e.player.toLowerCase()})"></b>${e.n===2?'<span class="pill mars">Mars</span>':''}</span><span class="by rule"></span></span><span class="when">${fmt(e.t)}</span>`;
+      li.querySelector("b").textContent = names[e.player] + (e.n === 2 ? " +2" : " +1");
+      li.querySelector(".by").textContent = e.by && e.by !== e.player ? ` · ${who(e.by)} girdi` : "";
+    } else if (e.type === "undo") {
+      const t = events.find(x => x.id === e.target);
+      li.innerHTML = `<span class="num">↺</span><span><span class="pill undo">Geri alındı</span> <span class="txt"></span></span><span class="when">${fmt(e.t)}</span>`;
+      li.querySelector(".txt").textContent = `${who(e.by)}, #${winNo.get(e.target) || "?"} ${t ? names[t.player] + (t.n===2?" +2":" +1") : ""} çentiğini geri aldı`;
+    } else return;
+    log.appendChild(li);
+  });
+  show($("empty"), events.length === 0);
+  const last = live.filter(canUndo).pop();
+  show($("undoBox"), role !== "viewer" && !!last);
+  show($("adminBox"), role === "admin");
+  drawChart(series);
+}
+
+function drawChart(s){
+  const svg=$("chart"),W=640,H=240,L=40,R=12,T=12,B=30,n=s.A.length-1;
+  const maxY=Math.max(5,Math.ceil(Math.max(...s.A,...s.B)/5)*5);
+  const x=i=>L+(n?i/n:0)*(W-L-R), y=v=>T+(1-v/maxY)*(H-T-B);
+  let g=""; const step=maxY<=30?5:Math.ceil(maxY/6/5)*5;
+  for(let v=0;v<=maxY;v+=step) g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="JetBrains Mono,monospace">${v/5}</text>`;
+  g+=`<text x="${L}" y="${H-8}" font-size="11" fill="var(--muted)">1. oyun</text><text x="${W-R}" y="${H-8}" text-anchor="end" font-size="11" fill="var(--muted)">${n?n+". oyun":""}</text>`;
+  if(n) P.forEach(p=>{ let st=""; s[p].forEach((v,i)=>{ st+= i?` L${x(i).toFixed(1)},${y(s[p][i-1]).toFixed(1)} L${x(i).toFixed(1)},${y(v).toFixed(1)}`:`M${x(0)},${y(v)}`; });
+    g+=`<path d="${st}" fill="none" stroke="var(--${p.toLowerCase()})" stroke-width="2.5" stroke-linejoin="round"/><circle cx="${x(n)}" cy="${y(s[p][n])}" r="4" fill="var(--${p.toLowerCase()})"/>`; });
+  svg.innerHTML=g;
+}
+
+/* ---------- işlemler ---------- */
+document.querySelectorAll(".btns button[data-w]").forEach(b => b.addEventListener("click", async () => {
+  const p = b.dataset.w, n = +b.dataset.n;
+  if (busy || !(role === "admin" || role === p)) return; busy = true;
+  try { await addDoc(collection(fs, "events"), { type: "win", player: p, n, by: role, t: serverTimestamp() }); }
+  catch (e) { note("Çentik kaydedilemedi. Tekrar giriş yapmayı dene."); }
+  busy = false;
+}));
+let undoTarget = null;
+$("undoBtn").onclick = () => {
+  undoTarget = derive().live.filter(canUndo).pop(); if (!undoTarget) return;
+  $("undoWhat").textContent = `${names[undoTarget.player]} ${undoTarget.n===2?"+2 (mars)":"+1"} · ${fmt(undoTarget.t)} geri alınsın mı? Defterde görünecek.`;
+  show($("undoAsk"), true); show($("undoBtn"), false);
+};
+$("undoNo").onclick = () => { show($("undoAsk"), false); show($("undoBtn"), true); };
+$("undoYes").onclick = async () => {
+  show($("undoAsk"), false); show($("undoBtn"), true); const t = undoTarget; if (!t) return;
+  try { await setDoc(doc(fs, "events", "undo-" + t.id), { type: "undo", player: t.player, target: t.id, by: role, t: serverTimestamp() }); }
+  catch (e) { note("Geri alınamadı. Bu çentik zaten geri alınmış olabilir."); }
+};
+P.forEach(p => { const el = $("name"+p);
+  el.addEventListener("change", async () => { if (role !== "admin") return; names[p] = el.value.trim().slice(0,30) || names[p]; render();
+    try { await setDoc(doc(fs, "config", "main"), { ...names }); } catch(e) { note("İsim kaydedilemedi."); } });
+  el.addEventListener("keydown", e => { if (e.key === "Enter") el.blur(); });
+});
+</script>
+</body>
+</html>

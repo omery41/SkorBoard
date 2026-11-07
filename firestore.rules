@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin()  { return signedIn() && request.auth.token.email == 'admin@tavla.test'; }
+    function isPlayer(p) {
+      return signedIn() && (
+        (p == 'A' && request.auth.token.email == 'pervin@tavla.test') ||
+        (p == 'B' && request.auth.token.email == 'emin@tavla.test'));
+    }
+    // Admin her şeyi girer; oyuncu sadece kendi adına, sunucu saatiyle.
+    function actorOk(d) {
+      return (isAdmin() && d.by == 'admin' && d.t is timestamp)
+          || (isPlayer(d.player) && d.by == d.player && d.t == request.time);
+    }
+
+    // Skor isimleri: herkes okur, sadece Admin değiştirir.
+    match /config/{id} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['A','B'])
+        && request.resource.data.A is string && request.resource.data.A.size() <= 30
+        && request.resource.data.B is string && request.resource.data.B.size() <= 30;
+    }
+
+    // İşlem defteri: sadece ekleme yapılır, hiçbir kayıt değiştirilmez ya da silinmez.
+    match /events/{id} {
+      allow read: if true;
+      allow update, delete: if false;
+
+      allow create: if actorOk(request.resource.data) && (
+        // Galibiyet: +1 ya da mars +2
+        (request.resource.data.keys().hasOnly(['type','player','n','by','t'])
+          && request.resource.data.type == 'win'
+          && request.resource.data.player in ['A','B']
+          && request.resource.data.n in [1, 2])
+        ||
+        // Geri alma: aynı oyuncunun bir galibiyetini işaretler; her çentik bir kez geri alınır
+        (request.resource.data.keys().hasOnly(['type','player','target','by','t'])
+          && request.resource.data.type == 'undo'
+          && id == 'undo-' + request.resource.data.target
+          && exists(/databases/$(database)/documents/events/$(request.resource.data.target))
+          && get(/databases/$(database)/documents/events/$(request.resource.data.target)).data.type == 'win'
+          && get(/databases/$(database)/documents/events/$(request.resource.data.target)).data.player == request.resource.data.player)
+      );
+    }
+  }
+}
