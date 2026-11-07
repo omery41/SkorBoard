@@ -137,9 +137,9 @@ h2.sec{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:6px 0
     </div>
     <form class="pw" id="authForm" novalidate>
       <label class="field">Nick<input id="fNick" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required></label>
-      <label class="field">Şifre<input type="password" id="fPw" autocomplete="current-password" required></label>
-      <label class="field hidden" id="fPw2Wrap">Şifre tekrar<input type="password" id="fPw2" autocomplete="new-password"></label>
-      <p class="hint hidden" id="upHint">Nick 3–20 karakter: harf, rakam, nokta, alt çizgi. Şifre en az 4 karakter.</p>
+      <label class="field">Şifre<input type="password" id="fPw" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" required></label>
+      <label class="field hidden" id="fPw2Wrap">Şifre tekrar<input type="password" id="fPw2" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password"></label>
+      <p class="hint hidden" id="upHint">Nick 3–20 karakter: harf, rakam, nokta, alt çizgi. Şifre en az 4 rakam.</p>
       <button class="primary" type="submit" id="authBtn">Giriş yap</button>
       <p class="err" id="authErr"></p>
     </form>
@@ -147,7 +147,7 @@ h2.sec{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:6px 0
       <h2>Admin hesabı</h2>
       <p class="rule">Admin hesabı yalnızca bu adresten açılır. Şifreyi belirle ve oluştur.</p>
       <form class="pw" id="setupForm">
-        <label class="field">Admin şifresi<input type="password" id="sPw" autocomplete="new-password" minlength="4" required></label>
+        <label class="field">Admin şifresi<input type="password" id="sPw" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" minlength="4" required></label>
         <button class="primary" type="submit">Admin hesabını oluştur</button>
         <p class="err" id="setupErr"></p>
       </form>
@@ -157,9 +157,9 @@ h2.sec{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:6px 0
   <!-- ŞİFRE DEĞİŞTİR (giriş yapınca her sayfada) -->
   <form class="panel pw hidden" id="pwForm">
     <h2>Şifre değiştir</h2>
-    <label class="field">Mevcut şifre<input type="password" id="pwOld" autocomplete="current-password" required></label>
-    <label class="field">Yeni şifre (en az 4 karakter)<input type="password" id="pwNew" autocomplete="new-password" minlength="4" required></label>
-    <label class="field">Yeni şifre tekrar<input type="password" id="pwNew2" autocomplete="new-password" minlength="4" required></label>
+    <label class="field">Mevcut şifre<input type="password" id="pwOld" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" required></label>
+    <label class="field">Yeni şifre (en az 4 rakam)<input type="password" id="pwNew" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" minlength="4" required></label>
+    <label class="field">Yeni şifre tekrar<input type="password" id="pwNew2" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" minlength="4" required></label>
     <div class="tools"><button class="primary" type="submit">Kaydet</button><button class="ghost" type="button" id="pwCancel">Vazgeç</button></div>
     <p class="err" id="pwErr"></p>
   </form>
@@ -248,7 +248,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v2.1.0";
+const VERSION = "v2.2.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 const DOMAIN = "skorboard.test";
@@ -269,6 +269,9 @@ const fs = getFirestore(app);
 const $ = id => document.getElementById(id);
 const show = (el, on) => el.classList.toggle("hidden", !on);
 const P = ["A", "B"];
+const LAST = "skorboard-son-nick";
+const getLast = () => { try { return localStorage.getItem(LAST) || ""; } catch (e) { return ""; } };
+const setLast = n => { try { localStorage.setItem(LAST, n); } catch (e) {} };
 
 let me = null;            // { uid, key, nick, admin }
 let boards = new Map();   // id → board
@@ -294,7 +297,8 @@ function setMode(m){
   $("authErr").textContent = "";
 }
 $("tabIn").onclick = () => setMode("in");
-$("tabUp").onclick = () => setMode("up");
+$("tabUp").onclick = () => { setMode("up"); $("fNick").value = ""; $("fPw").value = ""; $("fPw2").value = ""; $("fNick").focus(); };
+$("tabIn").addEventListener("click", () => { $("fNick").value = getLast(); $("fPw").value = ""; });
 
 function authMsg(code){
   return code === "auth/too-many-requests" ? "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene." :
@@ -312,15 +316,16 @@ $("authForm").addEventListener("submit", async e => {
   if (mode === "up") {
     if (!validKey(key)) { $("authErr").textContent = "Nick 3–20 karakter olmalı; harf, rakam, nokta ve alt çizgi kullanılabilir."; return; }
     if (key === ADMIN_KEY) { $("authErr").textContent = "Bu nick ayrılmış, başka bir nick seç."; return; }
-    if (pw.length < 4) { $("authErr").textContent = "Şifre en az 4 karakter olmalı."; return; }
+    if (!/^[0-9]{4,}$/.test(pw)) { $("authErr").textContent = "Şifre en az 4 rakamdan oluşmalı."; return; }
     if (pw !== $("fPw2").value) { $("authErr").textContent = "Şifreler aynı değil."; return; }
   }
   $("authBtn").disabled = true;
   try {
-    if (mode === "in") await signInWithEmailAndPassword(auth, emailOf(key), toFb(pw));
+    if (mode === "in") { await signInWithEmailAndPassword(auth, emailOf(key), toFb(pw)); setLast(raw); }
     else {
       pendingNick = raw; creating = true;
       const cred = await createUserWithEmailAndPassword(auth, emailOf(key), toFb(pw));
+      setLast(raw);
       try { await setDoc(doc(fs, "users", key), { uid: cred.user.uid, nick: raw, created: serverTimestamp() }); }
       catch (e2) { note(denied(e2) ? RULES_MSG : "Hesap açıldı ama nick kaydı tamamlanamadı; bir sonraki girişte tekrar denenecek."); }
       creating = false;
@@ -333,10 +338,11 @@ let pendingNick = null, creating = false;
 // Admin hesabı yalnızca #kurulum adresinden açılır.
 $("setupForm").addEventListener("submit", async e => {
   e.preventDefault(); const pw = $("sPw").value; $("setupErr").textContent = "";
-  if (pw.length < 4) { $("setupErr").textContent = "Şifre en az 4 karakter olmalı."; return; }
+  if (!/^[0-9]{4,}$/.test(pw)) { $("setupErr").textContent = "Şifre en az 4 rakamdan oluşmalı."; return; }
   try {
     creating = true;
     const cred = await createUserWithEmailAndPassword(auth, emailOf(ADMIN_KEY), toFb(pw));
+    setLast("admin");
     try { await setDoc(doc(fs, "users", ADMIN_KEY), { uid: cred.user.uid, nick: "Admin", created: serverTimestamp() }); }
     catch (e2) { if (denied(e2)) note(RULES_MSG); }
     creating = false;
@@ -369,7 +375,7 @@ $("pwForm").addEventListener("submit", async e => {
   e.preventDefault(); const u = auth.currentUser; if (!u) return;
   const o = $("pwOld").value, n = $("pwNew").value;
   if (n !== $("pwNew2").value) { $("pwErr").textContent = "Yeni şifreler aynı değil."; return; }
-  if (n.length < 4) { $("pwErr").textContent = "Yeni şifre en az 4 karakter olmalı."; return; }
+  if (!/^[0-9]{4,}$/.test(n)) { $("pwErr").textContent = "Yeni şifre en az 4 rakamdan oluşmalı."; return; }
   try {
     await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, toFb(o)));
     await updatePassword(u, toFb(n));
@@ -389,7 +395,10 @@ function route(){
   show($("who"), !!me); show($("logout"), !!me); show($("pwOpen"), !!me);
   if (me) $("who").textContent = me.admin ? "Admin" : me.nick;
   show($("setupBox"), !me && h === "kurulum");
-  if (!me) { show($("pwForm"), false); setMode(mode); }
+  if (!me) {
+    show($("pwForm"), false); setMode(mode);
+    if (mode === "in") { const last = getLast(); if (last && !$("fNick").value) $("fNick").value = last; $("fPw").value = ""; }
+  }
   if (v === "vNew") prepNew();
   if (v === "vBoard") openBoard(h.slice(2)); else closeBoard();
   if (v === "vHome") renderHome();
