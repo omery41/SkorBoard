@@ -1,9 +1,9 @@
-# Tavla Çentik Tablosu — Kurulum
+# SkorBoard — Kurulum
 
 Sayfa GitHub Pages'te durur. Skorlar ve girişler Firebase'de (ücretsiz plan) tutulur.
 
 ## 1. Firebase projesi
-1. https://console.firebase.google.com adresine Google hesabınla gir, **Proje ekle**'ye bas. İsim örneği: `tavla-skor`. Google Analytics'i kapatabilirsin.
+1. https://console.firebase.google.com adresine Google hesabınla gir, **Proje ekle**'ye bas. İsim örneği: `SkorBoard`. Google Analytics'i kapatabilirsin.
 2. **Build → Authentication → Başlayın → Sign-in method** sekmesinde **E-posta/Şifre**'yi etkinleştir.
 3. Hesapları konsoldan açman gerekmiyor. Kurulum bitince sayfayı `https://omery41.github.io/SkorBoard/#kurulum` adresiyle aç ve **Hesapları oluştur**'a bas. Admin, Pervin ve Emin hesapları 1234 şifresiyle oluşur. (Arka planda e-postalar admin@ / pervin@ / emin@tavla.test, Firebase'e giden şifre `tavla-1234`.)
    Hesaplar oluştuktan sonra **Authentication → Settings → Kullanıcı işlemleri** bölümünde **Oluşturmayı etkinleştir (sign-up)** seçeneğini kapat. Böylece başka kimse yeni hesap açamaz.
