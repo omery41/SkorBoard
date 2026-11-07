@@ -91,6 +91,9 @@ ol.log li{display:grid;grid-template-columns:3.2em 1fr auto;gap:10px;padding:8px
 .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .link{background:none;border:0;padding:4px 2px;color:var(--muted);font-weight:500;text-decoration:underline;font-size:.85rem}
 ol.log li.undone .what{text-decoration:line-through;opacity:.6}
+ol.log li.undorow{border-bottom:0;padding-bottom:0;font-size:.82rem;color:var(--muted)}
+ol.log li.undorow .pill.undo{font-size:.66rem;padding:1px 6px}
+ol.log li.undorow + li.undone{padding-top:4px}
 .pill.undo{background:var(--danger);color:var(--surface)}
 .pw{display:grid;gap:10px;max-width:360px}
 .ver{position:fixed;right:0;bottom:0;backdrop-filter:blur(6px);padding:6px calc(10px + env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) 10px;font-family:var(--mono);font-size:.7rem;color:var(--muted);background:var(--bg);border-top-left-radius:6px;opacity:.85;pointer-events:none;z-index:5}
@@ -307,7 +310,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v3.0.0";
+const VERSION = "v3.1.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 /* ---- Otomatik güncelleme ----
@@ -796,7 +799,13 @@ function renderBoard(){
   const log = $("log"); log.innerHTML = "";
   const winNo = new Map(); let k = 0; cur.events.forEach(e => { if (e.type === "win") winNo.set(e.id, ++k); });
   const who = by => by === "admin" ? "Admin" : names[by] || by;
-  cur.events.slice().reverse().slice(0, 100).forEach(e => {
+  // Geri alma satırları zamana göre en üste değil, geri alınan kaydın hemen üstüne yerleşir.
+  const ordered = [];
+  cur.events.filter(e => e.type === "win").slice().reverse().slice(0, 100).forEach(e => {
+    const u = undone.get(e.id); if (u) ordered.push(u);
+    ordered.push(e);
+  });
+  ordered.forEach(e => {
     const li = document.createElement("li");
     if (e.type === "win") {
       if (undone.has(e.id)) li.className = "undone";
@@ -805,8 +814,9 @@ function renderBoard(){
       if (e.n < 0) li.querySelector("b").style.opacity = ".75";
     } else if (e.type === "undo") {
       const t = cur.events.find(x => x.id === e.target);
+      li.className = "undorow";
       li.innerHTML = `<span class="num">↺</span><span><span class="pill undo">Geri alındı</span> <span class="txt"></span></span><span class="when">${fmt(e.t)}</span>`;
-      li.querySelector(".txt").textContent = `${who(e.by)}, #${winNo.get(e.target) || "?"} ${t ? names[t.player] + label(t.n) : ""} kaydını geri aldı`;
+      li.querySelector(".txt").textContent = `${who(e.by)} geri aldı`;
     } else return;
     if (e.type === "win" && open && !undone.has(e.id) && (role === "admin" || role === e.player)) {
       li.classList.add("tap"); li.dataset.undo = e.id;
