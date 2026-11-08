@@ -323,7 +323,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v3.2.0";
+const VERSION = "v3.2.1";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 /* ---- Otomatik güncelleme ----
@@ -630,7 +630,7 @@ function card(b){
   const mine = !me.admin;
   el.innerHTML = `<span class="ttl"></span><span class="sc"></span><span class="vs"><span class="a"></span> – <span class="b"></span></span><span class="meta"></span>`;
   const t = totals.get(b.id);
-  el.querySelector(".sc").textContent = t ? `${t.A} – ${t.B}` : "›";
+  el.querySelector(".sc").textContent = t ? `${t.A} – ${t.B}` : "…";
   const nm = boardNames(b);
   el.querySelector(".a").textContent = nm.A;
   el.querySelector(".b").textContent = nm.B;
@@ -645,11 +645,10 @@ function card(b){
 // Ana sayfadaki kartlar için her skorboardın güncel skorunu dinle (en fazla 30 skorboard).
 const totals = new Map(), scoreSubs = new Map();
 function syncScoreSubs(){
-  const want = new Set([...boards.values()].sort((a, b) => ms(b.created) - ms(a.created)).slice(0, 30).map(b => b.id));
+  const want = new Set([...boards.values()].map(b => b.id));   // her turnuvanın skoru canlı izlenir
   for (const [id, u] of scoreSubs) if (!want.has(id)) { u(); scoreSubs.delete(id); totals.delete(id); }
   for (const id of want) if (!scoreSubs.has(id)) scoreSubs.set(id, onSnapshot(collection(fs, "boards", id, "events"), s => {
-    const { live } = derive(s.docs.map(d => ({ id: d.id, ...d.data() })));
-    totals.set(id, tally(live).sc);
+    totals.set(id, scoreOf(readEvents(s)));
     if (!$("vHome").classList.contains("hidden")) renderHome();
   }, () => {}));
 }
@@ -730,7 +729,7 @@ function openBoard(id){
   }, () => { note("Bu skorboarda erişimin yok."); location.hash = "ana"; }));
   cur.unsub.push(onSnapshot(query(collection(fs, "boards", id, "events"), orderBy("t")), s => {
     if (!cur || cur.id !== id) return;
-    cur.events = s.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) })); renderBoard();
+    cur.events = readEvents(s); totals.set(id, scoreOf(cur.events)); renderBoard();
   }, () => {}));
   renderBoard();
 }
@@ -754,6 +753,12 @@ function tally(live){
   });
   return { sc, c, series };
 }
+// Kayıtları her yerde aynı sırayla oku: önce zaman, eşitse kayıt kimliği. Skor sıraya bağlı olduğu için şart.
+function readEvents(snap){
+  return snap.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) }))
+    .sort((a, b) => (ms(a.t) - ms(b.t)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+const scoreOf = events => tally(derive(events).live).sc;
 function derive(events){
   const undone = new Map();
   events.filter(e => e.type === "undo").forEach(e => undone.set(e.target, e));
