@@ -116,6 +116,9 @@ service cloud.firestore {
           && request.auth.uid in resource.data.players
           && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                 && request.resource.data.status in ['active', 'done'])
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+                && request.resource.data.name is string
+                && request.resource.data.name.size() <= 40)
             || ownColorChange()));
       allow delete: if isAdmin();
 

@@ -112,7 +112,16 @@ ol.log li{grid-template-columns:3.2em 1fr auto auto}
 .big.go span{color:var(--bg);opacity:.75}
 .cards{display:grid;gap:8px}
 .bcard{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;text-align:left;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(90deg,color-mix(in srgb,var(--ca,#ff6fb1) 14%,transparent),transparent 45%,transparent 55%,color-mix(in srgb,var(--cb,#4aa8ff) 14%,transparent)),var(--surface);color:var(--ink);font-weight:500}
-.bcard .vs{font-size:.95rem}
+.bcard .ttl{font-family:var(--display);font-size:1.35rem;line-height:1.15;color:var(--ink);min-width:0;overflow-wrap:anywhere}
+.bcard .ttl.noname{font-family:var(--body);font-size:1rem;font-weight:600;color:var(--muted)}
+.bcard .vs{font-size:.95rem;grid-column:1/-1}
+.titlerow{display:flex;align-items:center;gap:8px;min-width:0}
+.titlerow h2{min-width:0;overflow-wrap:anywhere}
+.editbtn{flex:none;display:inline-grid;place-items:center;width:30px;height:30px;padding:0;border-radius:999px;background:none;border:1px solid var(--line);color:var(--muted)}
+.editbtn svg{width:15px;height:15px}
+.renameform{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 100%}
+.renameform input{flex:1 1 160px;min-width:0;font:inherit;font-size:16px;padding:9px 11px;border-radius:10px;border:1px solid var(--gold);background:rgba(255,255,255,.06);color:var(--ink)}
+button.small{padding:8px 12px}
 .bcard .vs .a{color:var(--a);font-weight:600}.bcard .vs .b{color:var(--b);font-weight:600}
 .bcard .meta{grid-column:1/-1;font-size:.78rem;color:var(--muted);font-weight:400}
 .bcard .arrow{color:var(--muted);font-size:1.2rem}
@@ -244,7 +253,7 @@ input,select,textarea{font-size:16px}
       <label class="field" id="nP1Wrap">Birinci oyuncu (pembe)<input id="nP1" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="nick"></label>
       <label class="field"><span id="nP2Label">Rakibinin nick'i (mavi)</span><input id="nP2" autocapitalize="none" spellcheck="false" maxlength="20" required placeholder="nick"></label>
       <p class="found" id="nFound" aria-live="polite"></p>
-      <label class="field">Skorboard adı (isteğe bağlı)<input id="nName" maxlength="40" placeholder="Örn. Kış turnuvası"></label>
+      <label class="field">Turnuva adı (isteğe bağlı)<input id="nName" maxlength="40" placeholder="Örn. 2026"></label>
       <button class="primary" type="submit" id="newBtn">Skorboardu başlat</button>
       <p class="err" id="newErr"></p>
     </form>
@@ -254,7 +263,11 @@ input,select,textarea{font-size:16px}
   <section class="view hidden" id="vBoard">
     <button class="back" id="boardBack">← Ana sayfa</button>
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between">
-      <h2 class="sec" id="bName" style="margin:0"></h2>
+      <div class="titlerow"><h2 class="sec" id="bName" style="margin:0"></h2><button type="button" class="editbtn hidden" id="nameEdit" aria-label="Turnuva adını değiştir" title="Adı değiştir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z M13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button></div>
+      <form class="renameform hidden" id="renameForm">
+        <input id="renameInput" maxlength="40" placeholder="Örn. 2026" aria-label="Turnuva adı">
+        <button class="primary small" type="submit">Kaydet</button><button class="ghost small" type="button" id="renameCancel">Vazgeç</button>
+      </form>
       <span class="status" id="bStatus"></span>
     </div>
     <p class="rule">Galibiyet 1 çentik, mars 2 çentik. 5 çentik = 1 skor; artan çentik devretmez. “Skor +1” çentiğe dokunmadan skoru artırır. Düşürmek için çentik çizgilerine ya da skor rakamına dokun.</p>
@@ -310,7 +323,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v3.1.0";
+const VERSION = "v3.2.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 /* ---- Otomatik güncelleme ----
@@ -615,7 +628,7 @@ function startBoards(){
 function card(b){
   const el = document.createElement("button"); el.className = "bcard";
   const mine = !me.admin;
-  el.innerHTML = `<span class="vs"><span class="a"></span> – <span class="b"></span></span><span class="sc"></span><span class="meta"></span>`;
+  el.innerHTML = `<span class="ttl"></span><span class="sc"></span><span class="vs"><span class="a"></span> – <span class="b"></span></span><span class="meta"></span>`;
   const t = totals.get(b.id);
   el.querySelector(".sc").textContent = t ? `${t.A} – ${t.B}` : "›";
   const nm = boardNames(b);
@@ -623,7 +636,9 @@ function card(b){
   el.querySelector(".b").textContent = nm.B;
   const col = colorsOf(b); el.querySelector(".a").style.color = col.A; el.querySelector(".b").style.color = col.B;
   el.style.setProperty("--ca", col.A); el.style.setProperty("--cb", col.B);
-  el.querySelector(".meta").textContent = (b.name ? b.name + " · " : "") + fmtDate(b.created) + " tarihinde başladı";
+  el.querySelector(".ttl").textContent = b.name || "İsimsiz turnuva";
+  el.querySelector(".ttl").classList.toggle("noname", !b.name);
+  el.querySelector(".meta").textContent = fmtDate(b.created) + " tarihinde başladı";
   el.onclick = () => { location.hash = "b-" + b.id; };
   return el;
 }
@@ -776,6 +791,7 @@ function renderBoard(){
     });
   });
   $("bName").textContent = d.name || `${names.A} – ${names.B}`;
+  show($("nameEdit"), !!role && $("renameForm").classList.contains("hidden"));
   $("bStatus").textContent = open ? "Devam ediyor" : "Bitti";
   $("bStatus").classList.toggle("on", open);
   const { undone, live } = derive(cur.events);
@@ -876,6 +892,19 @@ document.querySelectorAll("#vBoard [data-minus]").forEach(el => el.addEventListe
 
 /* ---- Defterde bir kayda dokununca o kaydı geri al (iki dokunuşla) ---- */
 let undoArm = null, undoArmTimer = null;
+/* ---- Turnuva adını değiştir (oyuncular ve Admin) ---- */
+$("nameEdit").onclick = () => { $("renameInput").value = cur?.data?.name || ""; show($("renameForm"), true); show($("nameEdit"), false); show($("bName"), false); $("renameInput").focus(); };
+function closeRename(){ show($("renameForm"), false); show($("bName"), true); renderBoard(); }
+$("renameCancel").onclick = closeRename;
+$("renameForm").addEventListener("submit", async e => {
+  e.preventDefault(); if (!cur?.data || !myRole()) return;
+  const name = $("renameInput").value.trim().slice(0, 40);
+  closeRename(); if (name === (cur.data.name || "")) return;
+  $("bName").textContent = name || $("bName").textContent;
+  try { await updateDoc(doc(fs, "boards", cur.id), { name }); }
+  catch (err) { note(denied(err) ? "Ad kaydedilemedi. Firestore kuralları güncel değilse yeni kuralları yayınla." : "Ad kaydedilemedi, tekrar dene."); renderBoard(); }
+});
+
 /* ---- Renk seçimi: her oyuncu kendi rengini seçer; rakibin rengi alınamaz ---- */
 let colorOpen = null;
 P.forEach(p => $("cb"+p).addEventListener("click", () => { colorOpen = colorOpen === p ? null : p; renderBoard(); }));
