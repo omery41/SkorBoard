@@ -270,7 +270,7 @@ input,select,textarea{font-size:16px}
       </form>
       <span class="status" id="bStatus"></span>
     </div>
-    <p class="rule">Galibiyet 1 çentik, mars 2 çentik. 5 çentik = 1 skor; artan çentik devretmez. “Skor +1” çentiğe dokunmadan skoru artırır. Düşürmek için çentik çizgilerine ya da skor rakamına dokun.</p>
+    <p class="rule">Galibiyet 1 çentik, mars 2 çentik. 5 çentik = 1 skor; skor alınınca iki tarafın çentikleri de sıfırlanır. “Skor +1” çentiğe dokunmadan skoru artırır. Düşürmek için çentik çizgilerine ya da skor rakamına dokun.</p>
     <div class="players">
       <div class="p A locked">
         <div class="namerow"><div class="name" id="nameA"></div><button type="button" class="colbtn hidden" id="cbA" aria-expanded="false" aria-controls="swA" title="Renk seç"><i></i></button></div>
@@ -323,7 +323,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const VERSION = "v3.2.1";
+const VERSION = "v3.3.0";
 document.getElementById("ver").textContent = "SkorBoard " + VERSION;
 
 /* ---- Otomatik güncelleme ----
@@ -745,10 +745,12 @@ function tally(live){
   const sc = { A: 0, B: 0 }, c = { A: 0, B: 0 }, series = { A: [0], B: [0] };
   live.forEach(g => {
     const p = g.player;
-    if (g.n === 5) sc[p]++;                                   // skor +1: çentiklere dokunmaz
-    else if (g.n === -5) sc[p] = Math.max(0, sc[p] - 1);      // skor −1
-    else if (g.n === -1) c[p] = Math.max(0, c[p] - 1);        // çentik −1
-    else { c[p] += g.n; if (c[p] >= 5) { sc[p]++; c[p] = 0; } }
+    // Bir oyuncunun skoru arttığında iki tarafın çentikleri de sıfırlanır (yeni el başlar).
+    const win = () => { sc[p]++; c.A = 0; c.B = 0; };
+    if (g.n === 5) win();                                      // skor +1
+    else if (g.n === -5) sc[p] = Math.max(0, sc[p] - 1);       // skor −1
+    else if (g.n === -1) c[p] = Math.max(0, c[p] - 1);         // çentik −1
+    else { c[p] += g.n; if (c[p] >= 5) win(); }
     series.A.push(sc.A * 5 + c.A); series.B.push(sc.B * 5 + c.B);
   });
   return { sc, c, series };
